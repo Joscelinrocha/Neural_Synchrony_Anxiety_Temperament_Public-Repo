@@ -1,0 +1,12 @@
+Source: Main84_TdXp_Laptop.vi<append>
+<B>Task Name: </B>Dev2 - task_TrgIn
+Code: -88709
+
+Message: 
+Error -88709 occurred at Main84_TdXp_Laptop.vi
+
+Possible reason(s):
+
+The specified operation cannot be performed because a task has been aborted or a device has been removed from the system. Handle this situation as required by the application and then, if appropriate, attempt to perform the operation again.
+
+Task Name: Dev2 - task_TrgIn

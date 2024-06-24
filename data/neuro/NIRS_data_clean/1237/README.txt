@@ -1,0 +1,1 @@
+DB-DOS data for 1237 was split due to a cord coming uplugged. The child also did not want to do flanker with the cap on.

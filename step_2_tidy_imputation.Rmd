@@ -1,0 +1,346 @@
+---
+title: "Cleaning DF"
+author: "Joscelin Rocha-Hidalgo"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries
+```{r packages, include=FALSE}
+# Load the libraries
+library(tidyverse)
+library(mice)
+library(ltm) # for the Cronbach Alpha
+
+filter <- dplyr::filter
+mutate <- dplyr::mutate
+select <- dplyr::select
+summarise <- dplyr::summarise
+summarize <- dplyr::summarize
+```
+
+
+##  Import the datasets
+```{r datasets}
+# upload the datasets
+#### Synchrony data
+synch_data <- read_csv("data/neuro/wct_permuted_values_5_105.csv") %>%
+  janitor::clean_names() %>%
+  # select(-x1) %>%
+  mutate(
+    record_id = substr(as.character(parent), 1, 4),
+    record_id = as.numeric(record_id)
+  ) %>%
+  relocate(record_id, .before = parent) %>%
+  mutate(across(everything(), ~ ifelse(is.nan(.), NA, .)))
+
+
+## CBQ
+
+cbq_data_main_domains <- read_csv("data/qst/cbq_scores_big_three.csv") %>%
+  janitor::clean_names()
+
+cbq_data_main_subscales <- read_csv("data/qst/cbq_scores_subscales.csv") %>%
+  janitor::clean_names()
+
+## HBQ
+
+hbq_data_overall <- read_csv("data/qst/hbq_scores_overall.csv") %>%
+  janitor::clean_names() %>%
+  rowwise() %>%
+  mutate(anxiety_c = mean(c_across(c("hbq_internalizing_symptoms_overanxious", "hbq_internalizing_symptoms_separation_anxiety", "hbq_social_withdrawal_social_inhibition")), na.rm = TRUE)) %>%
+  select(record_id, hbq_internalizing_symptoms_overanxious, hbq_internalizing_symptoms_separation_anxiety, hbq_social_withdrawal_social_inhibition, anxiety_c)
+
+
+### STAI
+stai_data <- read_csv("data/qst/stai_scores.csv") %>%
+  janitor::clean_names()
+
+### Demo (age)
+load("data/demo/primary_parent_sample_long.RData")
+primary_parent_sample_long <- primary_parent_sample_long %>%
+  select(record_id, site:p_latinx, income_house, p_edu)
+
+## Merging them all
+questionnaires_data <- cbq_data_main_domains %>%
+  left_join(primary_parent_sample_long) %>%
+  left_join(cbq_data_main_subscales) %>%
+  left_join(stai_data) %>%
+  left_join(hbq_data_overall) %>%
+  select(record_id, stai_trait, stai_state, cbq_effortful_control, cbq_fear, anxiety_c)
+```
+
+## Finding the real dyads and Pseudo dyads
+
+```{r}
+### Creating variable to identify which ones are real dyads and which ones aren't
+synchrony_data_per_trial <- synch_data %>%
+  mutate(
+    category = ifelse(
+      substr(as.character(parent), 1, 4) == substr(as.character(child), 1, 4),
+      1,
+      0
+    ),
+    category = as.factor(category),
+    baseline = 0
+  ) %>%
+  rowwise() %>%
+  mutate(
+    avg_score = mean(c_across(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
+    DLPFC_avg_score = mean(c_across(c("s3_d2_hbo", "s4_d2_hbo", "s5_d3_hbo", "s6_d3_hbo")), na.rm = TRUE),
+    VLPFC_avg_score = mean(c_across(c("s1_d1_hbo", "s2_d1_hbo", "s2_d2_hbo", "s7_d3_hbo", "s7_d4_hbo", "s8_d4_hbo")), na.rm = TRUE),
+  ) %>%
+  ungroup()
+
+synchrony_data_per_trial$category <- recode_factor(synchrony_data_per_trial$category, `1` = "Real Dyads", `0` = "Pseudo Dyads")
+
+# write files in .Rdata format so the factors and other column types remain with the values I assigned
+save(synchrony_data_per_trial, file = "data/tidy/tidy_df_pseudo_and_real_per_trial.RData")
+
+synchrony_data <- synch_data %>%
+  select(record_id:s8_d4_hbo) %>%
+  pivot_longer(
+    cols = starts_with("s"),
+    names_to = "channel",
+    values_to = "value"
+  ) %>%
+  group_by(record_id, parent, child, block, channel) %>%
+  summarise(average = mean(value, na.rm = TRUE)) %>%
+  pivot_wider(names_from = channel, values_from = average) %>%
+  mutate(
+    category = ifelse(
+      substr(as.character(parent), 1, 4) == substr(as.character(child), 1, 4),
+      1,
+      0
+    ),
+    category = as.factor(category),
+    baseline = 0
+  ) %>%
+  rowwise() %>%
+  mutate(
+    avg_score = mean(c_across(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
+    DLPFC_avg_score = mean(c_across(c("s3_d2_hbo", "s4_d2_hbo", "s5_d3_hbo", "s6_d3_hbo")), na.rm = TRUE),
+    VLPFC_avg_score = mean(c_across(c("s1_d1_hbo", "s2_d1_hbo", "s2_d2_hbo", "s7_d3_hbo", "s7_d4_hbo", "s8_d4_hbo")), na.rm = TRUE),
+  ) %>%
+  ungroup()
+
+synchrony_data$category <- recode_factor(synchrony_data$category, `1` = "Real Dyads", `0` = "Pseudo Dyads")
+
+# write files in .Rdata format so the factors and other column types remain with the values I assigned
+save(synchrony_data, file = "data/tidy/tidy_df_pseudo_and_real.RData")
+```
+
+
+## Adding Questionnaires
+```{r}
+
+nirs_records <- synchrony_data %>%
+  select(record_id) %>%
+  unique()
+
+
+nirs_records_plus_demo <- nirs_records %>%
+  left_join(primary_parent_sample_long)
+
+nirs_records_plus_qst_df <- nirs_records %>%
+  left_join(questionnaires_data)
+
+write_csv(nirs_records_plus_qst_df, "data/tidy/pre_imputation_df.csv")
+```
+## Impute data
+
+```{r inpute-data, warning=FALSE}
+# set number of imputations
+n_imputations <- 25
+
+# impute missing data
+imp <- mice(nirs_records_plus_qst_df, m = n_imputations, seed = 3, print = FALSE)
+
+# initialize empty list
+imputed_data_list <- list()
+
+# loop to store each imputed dataset
+for (i in 1:n_imputations) {
+  # store imputation iteration in list
+  imputed_data_list[[i]] <- complete(imp, action = i)
+}
+```
+
+### Combine imputed datasets
+
+```{r}
+# bind imputed data frames
+combined_data <- do.call(rbind, imputed_data_list)
+# collapse continuous variables, join with categorical variables
+
+dat_long_imp <- combined_data %>%
+  group_by(record_id) %>%
+  summarise_all(mean, na.rm = TRUE) %>%
+  ungroup()
+
+write_csv(dat_long_imp, "data/tidy/post_imputation_df.csv")
+
+```
+
+## Merge all DFs
+```{r}
+nirs_plus_qst <- synchrony_data %>%
+  filter(category == "Real Dyads") %>%
+  left_join(dat_long_imp) %>%
+  left_join(primary_parent_sample_long)
+
+nirs_per_trial_plus_qst <- synchrony_data_per_trial %>%
+  filter(category == "Real Dyads") %>%
+  left_join(dat_long_imp) %>%
+  left_join(primary_parent_sample_long)
+
+
+avg_1 <- nirs_plus_qst %>%
+  distinct(record_id, .keep_all = TRUE) %>%
+  select(c_age_y) %>%
+  summarise(c_age_avg = mean(c_age_y, na.rm = TRUE)) %>%
+  pull()
+
+nirs_plus_qst <- nirs_plus_qst %>%
+  mutate(c_age_y_centered = round(c_age_y - avg_1, 2))
+
+nirs_per_trial_plus_qst <- nirs_per_trial_plus_qst %>%
+  mutate(c_age_y_centered = round(c_age_y - avg_1, 2))
+
+write_csv(nirs_per_trial_plus_qst,"data/tidy/tidy_df.csv")
+# write files in .Rdata format so the factors and other column types remain with the values I assigned
+save(nirs_per_trial_plus_qst, file = "data/tidy/tidy_df.RData")
+```
+
+## Cronbach Alphas for questionnaires
+
+### STAI
+```{r}
+# upload the datasets
+stai_raw <- read_csv("data/qst/stai_raw.csv") %>%
+  janitor::clean_names()
+stai_items <- read_csv("data/qst/stai_items.csv") %>%
+  janitor::clean_names()
+  
+a <- stai_raw %>%
+  pivot_longer(cols = stai1:stai40, names_to = "item", values_to = "stai_score") %>%
+  right_join(stai_items) %>%
+  filter(stai_type == "stai_state") %>%
+  mutate(stai_score_r = case_when(
+    stai_score < 0 ~ NA_real_,
+    action == "reverse" ~ 5 - stai_score,
+    TRUE ~ stai_score
+  )) %>%
+  select(record_id, item, stai_score_r) %>%
+  pivot_wider(names_from = item, values_from = stai_score_r) %>%
+  right_join(nirs_records) %>%
+  select(-record_id) %>%
+  filter(across(everything(), ~ !is.na(.)))
+
+# calculate cronbach's alpha
+ cronbach.alpha(a, CI=TRUE, standardized=TRUE)
+
+b <- stai_raw %>%
+  pivot_longer(cols = stai1:stai40, names_to = "item", values_to = "stai_score") %>%
+  right_join(stai_items) %>%
+  filter(stai_type == "stai_trait") %>%
+  mutate(stai_score_r = case_when(
+    stai_score < 0 ~ NA_real_,
+    action == "reverse" ~ 5 - stai_score,
+    TRUE ~ stai_score
+  )) %>%
+  select(record_id, item, stai_score_r) %>%
+  pivot_wider(names_from = item, values_from = stai_score_r) %>%
+  right_join(nirs_records) %>%
+  select(-record_id) %>%
+  filter(across(everything(), ~ !is.na(.)))
+# calculate cronbach's alpha
+ cronbach.alpha(b, CI=TRUE, standardized=TRUE)
+
+# remove dfs I won't need again
+rm("a", "b", "stai_data", "stai_items")
+```
+
+### Child Anxiety
+```{r}
+c <- hbq_data_overall %>%
+  right_join(nirs_records) %>%
+  select(-record_id, -anxiety_c)
+
+# calculate cronbach's alpha
+cronbach.alpha(c, CI=TRUE, standardized=TRUE)
+
+# remove dfs I won't need again
+rm("c", "hbq_data_overall")
+```
+### CBQ Fear and Effortful Control
+```{r}
+cbq_items <- read_csv("data/qst/cbq_items.csv") %>%
+  janitor::clean_names()
+
+cbq_raw <- read_csv("data/qst/cbq_raw.csv") %>%
+  janitor::clean_names()
+
+d <-  cbq_raw %>%
+  pivot_longer(cols = cbq_1:cbq_94, names_to = "item", values_to = "cbq_score") %>%
+  right_join(cbq_items) %>%
+  select(-c("question")) %>%
+  mutate(cbq_score_r = case_when(
+    cbq_score < 0 ~ NA_real_,
+    action == "reverse" ~ 8 - cbq_score,
+    TRUE ~ cbq_score
+  )) %>%
+  group_by(record_id, subscale) %>%
+  filter(subscale == "fear") %>%
+  filter(!is.na(subscale)) %>%
+  mutate(cbq_score_r = case_when(
+    cbq_score_r == 0 ~ NA_real_,
+    TRUE ~ cbq_score_r
+  )) %>%
+  ungroup() %>%
+  select(-c(action, subscale, factor_group, additional_calc, cbq_score)) %>%
+  pivot_wider(names_from = item, values_from = cbq_score_r) %>%
+  right_join(nirs_records) %>%
+  select(-record_id) %>%
+  filter(across(everything(), ~ !is.na(.)))
+
+# calculate cronbach's alpha
+cronbach.alpha(d, CI=TRUE, standardized=TRUE)
+
+e <- cbq_raw %>%
+  pivot_longer(cols = cbq_1:cbq_94, names_to = "item", values_to = "cbq_score") %>%
+  right_join(cbq_items) %>%
+  select(-c("question")) %>%
+  mutate(cbq_score_r = case_when(
+    cbq_score < 0 ~ NA_real_,
+    action == "reverse" ~ 8 - cbq_score,
+    TRUE ~ cbq_score
+  )) %>%
+  group_by(record_id, factor_group) %>%
+  filter(factor_group == "effortful_control") %>%
+  filter(!is.na(factor_group)) %>%
+  mutate(cbq_score_r = case_when(
+    cbq_score_r == 0 ~ NA_real_,
+    TRUE ~ cbq_score_r
+  )) %>%
+  ungroup() %>%
+  select(-c(action, subscale, factor_group, additional_calc, cbq_score)) %>%
+  pivot_wider(names_from = item, values_from = cbq_score_r) %>%
+  right_join(nirs_records) %>%
+  select(-record_id) %>%
+  filter(across(everything(), ~ !is.na(.)))
+
+# calculate cronbach's alpha
+cronbach.alpha(e, CI=TRUE, standardized=TRUE)
+
+# remove dfs I won't need again
+rm("e", "d")
+```
+
+

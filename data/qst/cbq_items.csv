@@ -1,0 +1,95 @@
+﻿item,question,action,subscale,factor_group,additional_calc
+cbq_1,Seems always in a big hurry to get from one place to another.,,activity_level,surgency,
+cbq_2,Gets angry when told s/he has to go to bed.,,anger_frustration,negative_affectivity,8-x
+cbq_3,Is not very bothered by pain.,reverse,discomfort,negative_affectivity,8-x
+cbq_4,Likes going down high slides or other adventurous activities.,,high_intensity_pleasure,surgency,
+cbq_5,Notices the smoothness or roughness of objects s/he touches.,,perceptual_sensitivity,effortful_control,
+cbq_6,Gets so worked up before an exciting event that s/he has trouble sitting still.,,approach_positive_anticipation,,
+cbq_7,Usually rushes into an activity without thinking about it.,,impulsivity,surgency,
+cbq_8,Cries sadly when a favorite toy gets lost or broken.,,sadness,negative_affectivity,8-x
+cbq_9,Becomes quite uncomfortable when cold and/or wet.,,discomfort,negative_affectivity,8-x
+cbq_10,Likes to play so wild and recklessly that s/he might get hurt.,,high_intensity_pleasure,surgency,
+cbq_11,Seems to be at ease with almost any person.,reverse,shyness,surgency,8-x
+cbq_12,Tends to run rather than walk from room to room.,,activity_level,surgency,
+cbq13,Notices it when parents are wearing new clothing.,,perceptual_sensitivity,effortful_control,
+cbq14,Has temper tantrums when s/he doesn't get what s/he wants.,,anger_frustration,negative_affectivity,8-x
+cbq_15,Gets very enthusiastic about the things s/he does.,,approach_positive_anticipation,,
+cbq16,"When practicing an activity, has a hard time keeping her/his mind on it.",reverse,attentional_focusing,effortful_control,
+cbq_17,Is afraid of burglars or the 'boogie man.',,fear,negative_affectivity,8-x
+cbq_18,"When outside, often sits quietly.",reverse,activity_level,surgency,
+cbq_19,Enjoys funny stories but usually doesn't laugh at them.,reverse,smiling_laughter,,
+cbq_20,Tends to become sad if the family's plans don't work out.,,sadness,negative_affectivity,8-x
+cbq21,Will move from one task to another without completing any of them.,reverse,attentional_focusing,effortful_control,
+cbq22,"Moves about actively (runs, climbs, jumps) when playing in the house.",,activity_level,surgency,
+cbq23,Is afraid of loud noises.,,fear,negative_affectivity,8-x
+cbq24,Seems to listen to even quiet sounds.,,perceptual_sensitivity,effortful_control,
+cbq_25,Has a hard time settling down after an exciting activity.,reverse,falling_reactivity_soothability,negative_affectivity,8-x
+cbq_26,Enjoys taking warm baths.,,low_intensity_pleasure,effortful_control,
+cbq_27,Seems to feel depressed when unable to accomplish some task.,,sadness,negative_affectivity,8-x
+cbq_28,Often rushes into new situations.,,impulsivity,surgency,
+cbq_29,Is quite upset by a little cut or bruise.,,discomfort,negative_affectivity,8-x
+cbq_30,Gets quite frustrated when prevented from doing something s/he wants to do.,,anger_frustration,negative_affectivity,8-x
+cbq_31,Becomes upset when loved relatives or friends are getting ready to leave following a visit.,,sadness,negative_affectivity,8-x
+cbq_32,Comments when a parent has changed his/her appearance.,,perceptual_sensitivity,effortful_control,
+cbq_33,"Enjoys activities such as being chased, spun around by the arms, etc.",,high_intensity_pleasure,surgency,
+cbq_34,"When angry about something, s/he tends to stay upset for ten minutes or longer.",reverse,falling_reactivity_soothability,negative_affectivity,8-x
+cbq_35,Is not afraid of the dark.,reverse,fear,negative_affectivity,8-x
+cbq_36,Takes a long time in approaching new situations.,reverse,impulsivity,surgency,
+cbq_37,Is sometimes shy even around people s/he has known a long time.,,shyness,surgency,8-x
+cbq38,Can wait before entering into new activities if s/he is asked to.,,inhibitory_control,effortful_control,
+cbq39,Enjoys 'snuggling up' next to a parent or babysitter.,,low_intensity_pleasure,effortful_control,
+cbq40,Gets angry when s/he can't find something s/he wants to play with.,,anger_frustration,negative_affectivity,8-x
+cbq_41,Is afraid of fire.,,fear,negative_affectivity,8-x
+cbq_42,Sometimes seems nervous when talking to adults s/he has just met.,,shyness,surgency,8-x
+cbq_43,Is slow and unhurried in deciding what to do next.,reverse,impulsivity,surgency,
+cbq44,Changes from being upset to feeling much better within a few minutes.,,falling_reactivity_soothability,negative_affectivity,8-x
+cbq_45,Prepares for trips and outings by planning things s/he will need.,,inhibitory_control,effortful_control,
+cbq46,Becomes very excited while planning for trips.,,approach_positive_anticipation,,
+cbq_47,Is quickly aware of some new item in the living room.,,perceptual_sensitivity,effortful_control,
+cbq_48,Hardly ever laughs out loud during play with other children.,reverse,smiling_laughter,,
+cbq_49,Is not very upset at minor cuts or bruises.,reverse,discomfort,negative_affectivity,8-x
+cbq_50,Prefers quiet activities to active games.,reverse,activity_level,surgency,
+cbq_51,"Tends to say the first thing that comes to mind, without stopping to think about it.",,impulsivity,surgency,
+cbq_52,Acts shy around new people.,,shyness,surgency,8-x
+cbq_53,"Has trouble sitting still when s/he is told to (at movies, church, etc.).",reverse,inhibitory_control,effortful_control,
+cbq54,Rarely cries when s/he hears a sad story.,reverse,sadness,negative_affectivity,8-x
+cbq_55,Sometimes smiles or giggles playing by her/himself.,,smiling_laughter,,
+cbq_56,Rarely becomes upset when watching a sad event in a TV show.,reverse,sadness,negative_affectivity,8-x
+cbq_57,Enjoys just being talked to.,,low_intensity_pleasure,effortful_control,
+cbq_58,"Becomes very excited before an outing (e.g., picnic, party).",,approach_positive_anticipation,,
+cbq59,"If upset, cheers up quickly when s/he thinks about something else",,falling_reactivity_soothability,negative_affectivity,8-x
+cbq_60,Is comfortable asking other children to play.,reverse,shyness,surgency,8-x
+cbq_61,Rarely gets upset when told s/he has to go to bed.,reverse,anger_frustration,negative_affectivity,8-x
+cbq_62,"When drawing or coloring in a book, shows strong concentration.",,attentional_focusing,effortful_control,
+cbq_63,Is afraid of the dark.,,fear,negative_affectivity,8-x
+cbq_64,Is likely to cry when even a little bit hurt.,,discomfort,negative_affectivity,8-x
+cbq65,Enjoys looking at picture books.,,low_intensity_pleasure,effortful_control,
+cbq66,Is easy to soothe when s/he is upset,,falling_reactivity_soothability,negative_affectivity,8-x
+cbq67,Is good at following instructions.,,inhibitory_control,effortful_control,
+cbq_68,Is rarely frightened by 'monsters' seen on TV or at movies.,reverse,fear,negative_affectivity,8-x
+cbq69,Likes to go high and fast when pushed on a swing.,,high_intensity_pleasure,surgency,
+cbq70,Sometimes turns away shyly from new acquaintances,,shyness,surgency,8-x
+cbq_71,"When building or putting something together, becomes very involved in what s/he is doing, and works for long periods.",,attentional_focusing,effortful_control,
+cbq72,Likes being sung to.,,low_intensity_pleasure,effortful_control,
+cbq_73,Approaches places s/he has been told are dangerous slowly and cautiously.,,inhibitory_control,effortful_control,
+cbq_74,Rarely becomes discouraged when s/he has trouble making something work.,reverse,sadness,negative_affectivity,8-x
+cbq_75,Is very difficult to soothe when s/he has become upset.,reverse,falling_reactivity_soothability,negative_affectivity,8-x
+cbq_76,"Likes the sound of words, such as nursery rhymes.",,low_intensity_pleasure,effortful_control,
+cbq_77,Smiles a lot at people s/he likes.,,smiling_laughter,,
+cbq_78,Dislikes rough and rowdy games.,reverse,high_intensity_pleasure,surgency,
+cbq_79,Often laughs out loud in play with other children.,,smiling_laughter,,
+cbq_80,Rarely laughs aloud while watching TV or movie comedies.,reverse,smiling_laughter,,
+cbq_81,Can easily stop an activity when s/he is told 'no.',,inhibitory_control,effortful_control,
+cbq_82,Is among the last children to try out a new activity.,reverse,impulsivity,surgency,
+cbq_83,"Doesn't usually notice odors such as perfume, smoke, cooking, etc.",reverse,perceptual_sensitivity,effortful_control,
+cbq_84,Is easily distracted when listening to a story.,reverse,attentional_focusing,effortful_control,
+cbq_85,"Is full of energy, even in the evening.",,activity_level,surgency,
+cbq86,Enjoys sitting on parent's lap.,,low_intensity_pleasure,effortful_control,
+cbq87,Gets angry when called in from play before s/he is ready to quit.,,anger_frustration,negative_affectivity,8-x
+cbq_88,Enjoys riding a tricycle or bicycle fast and recklessly.,,high_intensity_pleasure,surgency,
+cbq_89,Sometimes becomes absorbed in a picture book and looks at it for a long time.,,attentional_focusing,effortful_control,
+cbq_90,Remains pretty calm about upcoming desserts like ice cream.,reverse,approach_positive_anticipation,,
+cbq_91,Hardly ever complains when ill with a cold.,reverse,discomfort,negative_affectivity,8-x
+cbq_92,"Looks forward to family outings, but does not get too excited about them.",reverse,approach_positive_anticipation,,
+cbq93,Likes to sit quietly and watch people do things.,reverse,activity_level,surgency,
+cbq_94,"Enjoys gentle rhythmic activities, such as rocking or swaying.",,low_intensity_pleasure,effortful_control,

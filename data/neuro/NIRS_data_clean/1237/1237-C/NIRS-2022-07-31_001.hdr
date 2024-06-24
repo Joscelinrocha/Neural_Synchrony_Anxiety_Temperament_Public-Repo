@@ -1,0 +1,80 @@
+[GeneralInfo]
+FileName="NIRS-2022-07-31_001"
+Date="Sun, Jul 31, 2022"
+Time="13:05:28.185"
+Device="NIRScout 16x24"
+Source="LED"
+Mod="Human Subject"
+APD=TRUE
+NIRStar="15.3"
+Subject=1
+
+[ImagingParameters]
+Sources=8
+Detectors=4
+ShortBundles=0
+ShortDetIndex=""
+Steps=8
+Wavelengths="760	850"
+TrigIns=4
+TrigOuts=0
+AnIns=0
+SamplingRate=7.812500
+Mod Amp="0.700	0.700"
+Threshold="0.000	0.000"
+
+[Paradigm]
+StimulusType="None"
+
+[ExperimentNotes]
+Notes="[Type notes here]"
+
+[GainSettings]
+Gains="#
+7	8	8	8
+5	5	8	8
+7	5	8	8
+7	4	8	8
+8	8	5	8
+8	8	5	8
+8	8	6	5
+8	8	8	7
+#"
+
+[Markers]
+Events="#
+12.90	1	101
+13.04	8	102
+132.94	1	1039
+146.77	1	1147
+266.77	1	2084
+280.61	1	2192
+400.63	1	3130
+414.45	1	3238
+534.44	1	4175
+537.44	4	4199
+#"
+
+[DataStructure]
+S-D-Key="1-1:1,1-2:2,1-3:3,1-4:4,2-1:5,2-2:6,2-3:7,2-4:8,3-1:9,3-2:10,3-3:11,3-4:12,4-1:13,4-2:14,4-3:15,4-4:16,5-1:17,5-2:18,5-3:19,5-4:20,6-1:21,6-2:22,6-3:23,6-4:24,7-1:25,7-2:26,7-3:27,7-4:28,8-1:29,8-2:30,8-3:31,8-4:32,"
+S-D-Mask="#
+1	0	0	0
+1	1	0	0
+0	1	0	0
+0	1	0	0
+0	0	1	0
+0	0	1	0
+0	0	1	1
+0	0	0	1
+#"
+
+[DarkNoise]
+Wavelength1="#
+5.630	5.913	6.605	5.726
+#"
+Wavelength2="#
+5.772	5.395	5.525	5.214
+#"
+
+[ChannelsDistance]
+ChanDis="30.0	30.0	30.0	30.0	30.0	30.0	30.0	30.0	30.0	30.0"
