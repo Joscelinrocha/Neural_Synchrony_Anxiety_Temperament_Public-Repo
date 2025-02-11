@@ -40,7 +40,6 @@ synch_data <- read_csv("data/neuro/wct_permuted_values_5_105.csv") %>%
   relocate(record_id, .before = parent) %>%
   mutate(across(everything(), ~ ifelse(is.nan(.), NA, .)))
 
-
 ## CBQ
 
 cbq_data_main_domains <- read_csv("data/qst/cbq_scores_big_three.csv") %>%
@@ -144,7 +143,6 @@ nirs_records <- synchrony_data %>%
   select(record_id) %>%
   unique()
 
-
 nirs_records_plus_demo <- nirs_records %>%
   left_join(primary_parent_sample_long)
 
@@ -223,12 +221,14 @@ save(nirs_per_trial_plus_qst, file = "data/tidy/tidy_df.RData")
 ### STAI
 ```{r}
 # upload the datasets
-stai_raw <- read_csv("data/qst/stai_raw.csv") %>%
+raw_data <- read_csv("data/qst/PCATR56_DATA_2024-03-05_1048.csv") %>%
   janitor::clean_names()
 stai_items <- read_csv("data/qst/stai_items.csv") %>%
   janitor::clean_names()
-  
-a <- stai_raw %>%
+
+a <- raw_data %>%
+  filter(redcap_event_name == "pcat_arm_1" | redcap_event_name == "pcat_arm_4") %>%
+  select(record_id, stai1:stai40) %>%
   pivot_longer(cols = stai1:stai40, names_to = "item", values_to = "stai_score") %>%
   right_join(stai_items) %>%
   filter(stai_type == "stai_state") %>%
@@ -244,9 +244,11 @@ a <- stai_raw %>%
   filter(across(everything(), ~ !is.na(.)))
 
 # calculate cronbach's alpha
- cronbach.alpha(a, CI=TRUE, standardized=TRUE)
+ cronbach.alpha(a, CI=TRUE, standardized=FALSE)
 
-b <- stai_raw %>%
+b <- raw_data %>%
+  filter(redcap_event_name == "pcat_arm_1" | redcap_event_name == "pcat_arm_4") %>%
+  select(record_id, stai1:stai40) %>%
   pivot_longer(cols = stai1:stai40, names_to = "item", values_to = "stai_score") %>%
   right_join(stai_items) %>%
   filter(stai_type == "stai_trait") %>%
@@ -261,7 +263,7 @@ b <- stai_raw %>%
   select(-record_id) %>%
   filter(across(everything(), ~ !is.na(.)))
 # calculate cronbach's alpha
- cronbach.alpha(b, CI=TRUE, standardized=TRUE)
+ cronbach.alpha(b, CI=TRUE, standardized=FALSE)
 
 # remove dfs I won't need again
 rm("a", "b", "stai_data", "stai_items")
@@ -269,25 +271,52 @@ rm("a", "b", "stai_data", "stai_items")
 
 ### Child Anxiety
 ```{r}
+hbq_items <- read_csv("data/qst/hbq_items.csv") %>%
+  janitor::clean_names()
+
 c <- hbq_data_overall %>%
   right_join(nirs_records) %>%
   select(-record_id, -anxiety_c)
 
+c <- raw_data %>%
+  filter(redcap_event_name == "pcat_arm_1" | redcap_event_name == "pcat_arm_4") %>%
+  select(record_id, ph_1:cmedhx18a) %>%
+  pivot_longer(cols = -record_id & where(is.double), names_to = "item", values_to = "hbq_score") %>%
+  relocate(c("item", "hbq_score"), .after = record_id) %>%
+  right_join(hbq_items) %>%
+  select(-c("question")) %>%
+  separate(subscale, into = c("domain", "scale", "subscale"), sep = "-") %>%
+  select(record_id:hbq_score, action, domain:subscale) %>%
+  filter(!is.na(domain)) %>%
+  mutate(hbq_score_r = case_when(
+    hbq_score < 0 ~ NA_real_,
+    action == "reverse" & subscale == "academic_competence" ~ 8 - hbq_score,
+    action == "reverse" & subscale != "academic_competence" ~ 5 - hbq_score,
+    TRUE ~ hbq_score
+  )) %>%
+  dplyr::filter(subscale %in% c("overanxious", "separation_anxiety","social_inhibition")) %>%
+  select(record_id, item, hbq_score_r) %>%
+  pivot_wider(names_from = item, values_from = hbq_score_r) %>%
+  right_join(nirs_records) %>%
+  select(-record_id) %>%
+  filter(across(everything(), ~ !is.na(.)))
+  
+
 # calculate cronbach's alpha
-cronbach.alpha(c, CI=TRUE, standardized=TRUE)
+cronbach.alpha(c, CI=TRUE, standardized=FALSE)
 
 # remove dfs I won't need again
 rm("c", "hbq_data_overall")
 ```
+
 ### CBQ Fear and Effortful Control
 ```{r}
 cbq_items <- read_csv("data/qst/cbq_items.csv") %>%
   janitor::clean_names()
 
-cbq_raw <- read_csv("data/qst/cbq_raw.csv") %>%
-  janitor::clean_names()
-
-d <-  cbq_raw %>%
+d <- raw_data %>%
+  filter(redcap_event_name == "pcat_arm_1" | redcap_event_name == "pcat_arm_4") %>%
+  select(record_id, cbq_1:cbq_94) %>%
   pivot_longer(cols = cbq_1:cbq_94, names_to = "item", values_to = "cbq_score") %>%
   right_join(cbq_items) %>%
   select(-c("question")) %>%
@@ -311,9 +340,11 @@ d <-  cbq_raw %>%
   filter(across(everything(), ~ !is.na(.)))
 
 # calculate cronbach's alpha
-cronbach.alpha(d, CI=TRUE, standardized=TRUE)
+cronbach.alpha(d, CI=TRUE, standardized=FALSE)
 
-e <- cbq_raw %>%
+e <- raw_data %>%
+  filter(redcap_event_name == "pcat_arm_1" | redcap_event_name == "pcat_arm_4") %>%
+  select(record_id, cbq_1:cbq_94) %>%
   pivot_longer(cols = cbq_1:cbq_94, names_to = "item", values_to = "cbq_score") %>%
   right_join(cbq_items) %>%
   select(-c("question")) %>%
@@ -337,10 +368,8 @@ e <- cbq_raw %>%
   filter(across(everything(), ~ !is.na(.)))
 
 # calculate cronbach's alpha
-cronbach.alpha(e, CI=TRUE, standardized=TRUE)
+cronbach.alpha(e, CI=TRUE, standardized=FALSE)
 
 # remove dfs I won't need again
 rm("e", "d")
 ```
-
-
