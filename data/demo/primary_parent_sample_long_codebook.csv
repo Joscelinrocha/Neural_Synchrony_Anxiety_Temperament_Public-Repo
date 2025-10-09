@@ -1,0 +1,170 @@
+Variable Name,Label,Type,Additional information
+record_id,Participant ID,numeric,
+site,Site,character,
+c_age_m,Child's Age (months),numeric,44.9 to 96.9
+c_age_y,Child's Age (years),numeric,3.69 to 7.97
+p_age_m,Caregiver's Age (months),numeric,307.5 to 625.0
+p_age_y,Caregiver's Age (years),numeric,25.27 to 51.37
+c_sex,Child's Sex,character,"1 = M
+2 = F"
+p_sex,Caregiver's Sex,character,"1 = M
+2 = F"
+c_race,Child's Race,numeric,"1 = White
+2 = Black/African American
+3 = Asian
+4 = Native Hawaiian/Pacific Islander
+5 = American Indian/Alaska Native
+6 = Multiracial
+-99 = Refused or N/A
+"
+p_race,Caregiver's Race,numeric,"1 = White
+2 = Black/African American
+3 = Asian
+4 = Native Hawaiian/Pacific Islander
+5 = American Indian/Alaska Native
+6 = Multiracial
+-99 = Refused or N/A"
+c_latinx,Child Latinx,character,"1 = Y
+2 = N"
+p_latinx,Caregiver Latinx,character,"1 = Y
+2 = N"
+c_religion,Child's Religious Upbringing,character,"1 = Roman catholic
+2 = Orthodox catholic
+3 = Protestant
+4 = Non-denominational
+5 = Mormon
+6 = 7th day adventist
+7 = Jehovah's witness
+8 = Jewish
+9 = Muslim
+10 = Buddhist
+11 = No religious preference
+12 = No religious beliefs
+13 = Other religious preference
+
+"
+p_religion,Caregiver's Religous Preference,character,"1 = Roman catholic
+2 = Orthodox catholic
+3 = Protestant
+4 = Non-denominational
+5 = Mormon
+6 = 7th day adventist
+7 = Jehovah's witness
+8 = Jewish
+9 = Muslim
+10 = Buddhist
+11 = No religious preference
+12 = No religious beliefs
+13 = Other religious preference
+
+"
+relation_child,Caregiver's Relation to Child,character,"1 = Biological parent
+2 = Step parent
+3 = Adoptive parent
+4 = Foster parent
+5 = Grandparent
+6 = Legal guardian
+-99 = Refused or N/A"
+contact_child,Caregiver's Contact Level with Child,character,"1 = Daily
+2 = 4-6 days per week
+3 = 1-3 days per week
+4 = Every other week
+5 = Other
+-99 = Refused or N/A"
+income_ind,Caregiver's Annual Individual Income,character,"1 = Less than $5,000
+2 = $5,000 - $11,999 
+3 = $12,000 - $15,999
+4 = $16,000 - $24,999
+5 = $25,000 - $34,999 
+6 = $35,000 - $49,999 
+7 = $50,000 - $74,999 
+8 = $75,000 - $99,999 
+9 = $100,000 and greater 
+10 = Dont know
+-99 = Refused or N/A"
+income_house,Caregiver's Annual Household Income,character,"1 = Less than $20,000 
+2 = $20,000 - $39,999 
+3 = $40,000 - $59,999
+4 = $60,000 - $79,999 
+5 = $80,000 - $99,999 
+6 = $100,000 - $119,000 
+7 = $120,000 - $250,000 
+8 = More than $250,000 
+-99 = Refused or N/A"
+home_ownership,Caregiver's Home Ownership Status,character,"1 = Owned or being bought by you (or someone in the household)
+2 = Rented for money
+3 = Occupied without payment of money or rent
+4 = Other"
+p_edu,Caregiver's Highest Degree Earned,character,"1 = No diploma or degree
+2 = GED
+3 = High school diploma
+4 = Associate's degree
+5 = Bachelor's degree
+6 = Master's degree
+7 - Doctorate, Ph.D., M.D., J.D., other
+8 = Some college
+-99 = Refused or N/A"
+p_marital_status,Caregiver's Marital Status,character,"1 = Married or living with someone as married
+2 = Separated
+3 = Divorced
+4 = Widowed
+5 = Never married"
+p_living_with_partner,Caregiver Living with Partner,character,"1 = Yes
+2 = No
+.missing = Does not have a partner
+"
+years_living_together,Years Caregiver Has Lived with Partner,numeric,1 to 28
+p_employment_status,Caregiver's Employement Status,character,"1 = Yes, part-time
+2 = Yes, full-time
+3 = Homemaker
+4 = No, not working
+5 = No, disabled
+6 = No, attending school
+-99 = Refused or N/A
+"
+p_school_status,Caregiver's School/Student Status,character,"1 = No
+2 = Yes, part-time
+3 = Yes, full-time
+-99 = Refused or N/A"
+other_caregivers,Number of Caregivers Other Than Primary Caregivers,numeric,0 to 12
+service_received_medicaid,Service Received: Medicaid,character,"1 = Y
+0 = N"
+service_received_wic,Service Received: WIC,character,"1 = Y
+0 = N"
+service_received_food_stamps,Service Received: Food Stamps,character,"1 = Y
+0 = N"
+service_received_welfare,Service Received: Welfare,character,"1 = Y
+0 = N"
+service_received_aid_dependent,Service Received: Aid for Dependents,character,"1 = Y
+0 = N"
+service_received_child_support,Service Received: Child Support,character,"1 = Y
+0 = N"
+service_received_social_security,Service Received: Social Security,character,"1 = Y
+0 = N"
+service_received_payments_foster,Service Received: Payments for a Foster Child,character,"1 = Y
+0 = N"
+service_received_disability_comp,Service Received: Disability Compensation,character,"1 = Y
+0 = N"
+service_received_unemployment_comp,Service Received: Unemployment Compensation,character,"1 = Y
+0 = N"
+unable_work_school,Caregiver Ever Unable to Attend Work or School,character,"1 = Yes
+0 = No
+-99 = Refused or N/A"
+legal_trouble,Cargiver Ever Faced Legal Trouble,character,"1 = Yes
+0 = No
+-99 = Refused or N/A"
+rel_quality,Quality of Caregiver Relationship with Child,character,"1 = Not well
+2 = Okay
+3 = Very well
+-99 = Refused or N/A"
+motor_mile_sit_unsupp,Motor Milestones: Sit Unsupported (months),numeric,2 to 12
+motor_mile_crawl,Motor Milestones: Crawl,numeric,4 to 12
+motor_mile_pull_to_stand,Motor Milestones: Pull to a Standing Position,numeric,5 to 16
+motor_mile_stand_without,Motor Milestones: Stand Momentarily without Supports,numeric,5 to 16
+motor_mile_stepping,Motor Milestones: Show Stepping Movements,numeric,7 to 18
+motor_mile_walk_indep,Motor Milestones: Walk Independently,numeric,8 to 24
+motor_mile_potty,Motor Milestones: Fully Potty Trained,numeric,10 to 55
+motor_mile_brush_teeth,Motor Milestones: Brush Teeth,numeric,0 to 80
+motor_mile_pick_toys,Motor Milestones: Pick Up Toys,numeric,0 to 60
+ladder_country,Perceived Social Standing in the United States,numeric,1 to 10
+ladder_community,Perceived Social Standing in Own Community,numeric,1 to 10
