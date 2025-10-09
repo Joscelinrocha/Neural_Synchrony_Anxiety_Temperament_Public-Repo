@@ -5,6 +5,10 @@ date: "`r Sys.Date()`"
 output:
   html_document:
     df_print: paged
+  pdf_document: default
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE}
@@ -32,7 +36,7 @@ library(NatParksPalettes)
 # devtools::install_github("johannesbjork/LaCroixColoR")
 # remotes::install_github("m-clark/NineteenEightyR")
 # remotes::install_github("jorvlan/raincloudplots")
-library("NineteenEightyR")
+#library(NineteenEightyR)
 library(PerformanceAnalytics)
 library(gt)
 library(sjPlot)
@@ -64,20 +68,24 @@ check_sequence <- function(x) {
 
 ```{r}
 load("data/tidy/tidy_df.RData")
+#load("data/tidy/tidy_df_real.RData")
 load("data/tidy/tidy_df_pseudo_and_real.RData")
+#load("data/tidy/tidy_df_real_dyads.RData")
 load("data/tidy/tidy_df_pseudo_and_real_per_trial.RData")
+#load("data/tidy/tidy_df_real_per_trial.RData")
 ```
 
 ## Descriptives
+
 ### Num of dyads
 
 ```{r}
 ### Number of dyads per group (Pseudo = 0 vs Real = 1)
-synchrony_data %>%
-  mutate(unique_code = paste0(parent, child)) %>%
-  distinct(unique_code, .keep_all = TRUE) %>%
-  group_by(category) %>%
-  count() %>%
+synchrony_data_per_trial|>
+  mutate(unique_code = paste0(parent, child))|>
+  distinct(unique_code, .keep_all = TRUE)|>
+  group_by(category)|>
+  count()|>
   ungroup()
 ```
 
@@ -86,30 +94,44 @@ synchrony_data %>%
 ```{r}
 ### Number of missing channels per group (Pseudo = 0 vs Real = 1 => Category) & Block (1,2,3)
 ## Values => if 1 = Missing, 0 = not missing
-synchrony_data %>%
-  mutate(unique_code = paste0(parent, child)) %>%
-  select(parent:category) %>%
-  pivot_longer(cols = c(s1_d1_hbo:s8_d4_hbo), names_to = "channel", values_to = "values") %>%
+synchrony_data|>
+  filter(band == "old") |> 
+  mutate(unique_code = paste0(parent, child))|>
+  select(parent:category)|>
+  pivot_longer(cols = c(s1_d1_hbo:s8_d4_hbo), names_to = "channel", values_to = "values")|>
   mutate(
     values = case_when(
       is.na(values) ~ "1",
       TRUE ~ "0"
     ),
     values = as.character(values)
-  ) %>%
-  group_by(category, block, values) %>%
-  count() %>%
+  )|>
+  group_by(category, band,block, values)|>
+  count()|>
   ungroup()
+
+```
+
+## Choose the band here
+
+```{r}
+synchrony_data <- synchrony_data |> 
+  filter(band == "old")
+
+# synchrony_data_real_dyads <- synchrony_data_real_dyads |>
+#   filter(band == "old")
 ```
 
 ### Mean Synchrony per Block
 
+#### Old Band
+
 ```{r}
 ### Mean synchrony per block for all Real Dyads
-synchrony_data %>%
-  filter(category == "Real Dyads") %>%
-  group_by(block) %>%
-  summarise(mean = round(mean(avg_score, .na.rm = TRUE), 2)) %>%
+synchrony_data|>
+  filter(category == "Real Dyads" & band == "old")|>
+  group_by(block)|>
+  summarise(mean = round(mean(avg_score, .na.rm = TRUE), 4))|>
   ungroup()
 ```
 
@@ -117,8 +139,8 @@ synchrony_data %>%
 
 ```{r}
 ### Age
-nirs_per_trial_plus_qst %>%
-  distinct(record_id, .keep_all = TRUE) %>%
+nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE)|>
   summarise(
     child_age_mean = round(mean(c_age_y, na.rm = TRUE), 2),
     child_age_sd = round(sd(c_age_y, na.rm = TRUE), 2),
@@ -131,10 +153,10 @@ nirs_per_trial_plus_qst %>%
 
 ```{r}
 ### Location
-nirs_per_trial_plus_qst %>%
-  distinct(record_id, .keep_all = TRUE) %>%
-  group_by(site) %>%
-  count() %>%
+nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE)|>
+  group_by(site)|>
+  count()|>
   ungroup()
 ```
 
@@ -142,10 +164,10 @@ nirs_per_trial_plus_qst %>%
 
 ```{r}
 ### Sex
-nirs_per_trial_plus_qst %>%
-  distinct(record_id, .keep_all = TRUE) %>%
-  group_by(p_sex) %>%
-  count() %>%
+nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE)|>
+  group_by(p_sex)|>
+  count()|>
   ungroup()
 ```
 
@@ -153,10 +175,10 @@ nirs_per_trial_plus_qst %>%
 
 ```{r}
 ### Sex Child
-nirs_per_trial_plus_qst %>%
-  distinct(record_id, .keep_all = TRUE) %>%
-  group_by(c_sex) %>%
-  count() %>%
+nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE)|>
+  group_by(c_sex)|>
+  count()|>
   ungroup()
 ```
 
@@ -164,12 +186,12 @@ nirs_per_trial_plus_qst %>%
 
 ```{r}
 ## Race
-nirs_per_trial_plus_qst %>%
-  distinct(record_id, .keep_all = TRUE) %>%
-  group_by(c_race) %>%
-  count() %>%
-  ungroup() %>%
-  filter(c_race != "None") %>%
+nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE)|>
+  group_by(c_race)|>
+  count()|>
+  ungroup()|>
+  filter(c_race != "None")|>
   mutate(percent = round(n / sum(n) * 100, 2))
 ```
 
@@ -178,12 +200,12 @@ nirs_per_trial_plus_qst %>%
 ```{r}
 ## Race Parent
 
-nirs_per_trial_plus_qst %>%
-  distinct(record_id, .keep_all = TRUE) %>%
-  group_by(p_race) %>%
-  count() %>%
-  ungroup() %>%
-  filter(p_race != "None") %>%
+nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE)|>
+  group_by(p_race)|>
+  count()|>
+  ungroup()|>
+  filter(p_race != "None")|>
   mutate(percent = round(n / sum(n) * 100, 2))
 ```
 
@@ -191,12 +213,12 @@ nirs_per_trial_plus_qst %>%
 
 ```{r}
 ## Latinx
-nirs_per_trial_plus_qst %>%
-  distinct(record_id, .keep_all = TRUE) %>%
-  group_by(c_latinx) %>%
-  count() %>%
-  ungroup() %>%
-  filter(c_latinx != "None") %>%
+nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE)|>
+  group_by(c_latinx)|>
+  count()|>
+  ungroup()|>
+  filter(c_latinx != "None")|>
   mutate(percent = round(n / sum(n) * 100, 2))
 ```
 
@@ -204,46 +226,47 @@ nirs_per_trial_plus_qst %>%
 
 ```{r}
 ## Latinx Parent
-nirs_per_trial_plus_qst %>%
-  distinct(record_id, .keep_all = TRUE) %>%
-  group_by(p_latinx) %>%
-  count() %>%
-  ungroup() %>%
-  filter(p_latinx != "None") %>%
+nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE)|>
+  group_by(p_latinx)|>
+  count()|>
+  ungroup()|>
+  filter(p_latinx != "None")|>
   mutate(percent = round(n / sum(n) * 100, 2))
 ```
 
 ### Family Income
 
 ```{r}
-nirs_per_trial_plus_qst %>%
-  distinct(record_id, .keep_all = TRUE) %>%
-  group_by(income_house) %>%
-  count() %>%
-  ungroup() %>%
-  filter(income_house != "None") %>%
+nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE)|>
+  group_by(income_house)|>
+  count()|>
+  ungroup()|>
+  filter(income_house != "None")|>
   mutate(percent = round(n / sum(n) * 100, 2))
 ```
 
 ### Parent Education
 
 ```{r}
-nirs_per_trial_plus_qst %>%
-  distinct(record_id, .keep_all = TRUE) %>%
-  group_by(p_edu) %>%
-  count() %>%
-  ungroup() %>%
-  filter(p_edu != "None") %>%
+nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE)|>
+  group_by(p_edu)|>
+  count()|>
+  ungroup()|>
+  filter(p_edu != "None")|>
   mutate(percent = round(n / sum(n) * 100, 2))
 ```
 
 ### Graph of real and Pseudo Dyads
+
 #### PFC
 
 ```{r}
 # synchrony_data$trial <- factor(synchrony_data$trial, levels = c("Trial 1", "Trial 2","Trial 3","Trial 4"))
 
-synchrony_data <- synchrony_data %>%
+synchrony_data <- synchrony_data|>
   mutate(new_block = case_when(
     block == "Block 1" ~ "Free Play Block",
     block == "Block 2" ~ "Stressful Block",
@@ -253,8 +276,7 @@ synchrony_data <- synchrony_data %>%
 
 synchrony_data$new_block <- factor(synchrony_data$new_block, levels = c("Free Play Block", "Stressful Block", "Recovery Block"))
 
-synchrony_data %>%
-  ggplot(., aes(x = category, y = avg_score, fill = category, col = category)) +
+ggplot(synchrony_data, aes(x = category, y = avg_score, fill = category, col = category)) +
   geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .2, adjust = 4) +
   geom_point(position = position_jitter(width = .10), size = 1, alpha = 0.4) +
   scale_fill_brewer(palette = "Dark2") +
@@ -278,8 +300,8 @@ ggsave("figures/aim_0_real_pseudo_dyads_avg-PFC.png", width = 14, height = 10)
 #### DLPFC
 
 ```{r}
-synchrony_data %>%
-  ggplot(., aes(x = category, y = DLPFC_avg_score, fill = category, col = category)) +
+
+ggplot(synchrony_data, aes(x = category, y = DLPFC_avg_score, fill = category, col = category)) +
   geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .2, adjust = 4) +
   geom_point(position = position_jitter(width = .10), size = 1, alpha = 0.4) +
   scale_fill_brewer(palette = "Dark2") +
@@ -301,8 +323,7 @@ ggsave("figures/aim_0_real_pseudo_dyads_avg-DLPFC.png", width = 14, height = 10)
 #### VLPFC
 
 ```{r}
-synchrony_data %>%
-  ggplot(., aes(x = category, y = VLPFC_avg_score, fill = category, col = category)) +
+ggplot(synchrony_data, aes(x = category, y = VLPFC_avg_score, fill = category, col = category)) +
   geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .2, adjust = 4) +
   geom_point(position = position_jitter(width = .10), size = 1, alpha = 0.4) +
   scale_fill_brewer(palette = "Dark2") +
@@ -324,15 +345,16 @@ ggsave("figures/aim_0_real_pseudo_dyads_avg-VLPFC.png", width = 14, height = 10)
 ### Model Testing Pseudo and real dyads
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+synchrony_data_per_trial$block <- factor(synchrony_data_per_trial$block, levels = c("Block 1", "Block 2", "Block 3"))
 
-nirs_per_trial_plus_qst <- nirs_per_trial_plus_qst %>%
-  mutate(new_id = paste0(parent, child))
+synchrony_data_per_trial <- synchrony_data_per_trial|>
+  mutate(new_id = paste0(parent, child),
+         trial_num = parse_number(trial)) |> 
+  filter(band == "old")
 
 
 model1 <- lmer(
-  avg_score ~ category +
-    (1 + block | record_id) + (1 | trial),
+  avg_score ~ category + (1 + block + trial_num | new_id),
   data = synchrony_data_per_trial,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -342,6 +364,33 @@ model1 <- lmer(
 
 summary(model1)
 report(model1)
+
+
+model1.2 <- lmer(
+  avg_score ~ category + (1 + block | new_id),
+  data = synchrony_data_per_trial,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+summary(model1.2)
+report(model1.2)
+
+anova(model1.2, model1)
+
+model1.3 <- lmer(
+  avg_score ~ category*block + (1 + block + trial_num | new_id),
+  data = synchrony_data_per_trial,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+summary(model1.3)
+
 ```
 
 #### Table Summary
@@ -360,22 +409,23 @@ msummary(modelsummary_1,
 ### Sum of blank channels
 
 ```{r}
-synchrony_data %>%
-  filter(category == "Real Dyads") %>%
-  dplyr::mutate(across(c("s1_d1_hbo":"s8_d4_hbo"), as.numeric)) %>%
-  rowwise() %>%
-  mutate(num_na = sum(is.na(c_across(s1_d1_hbo:s8_d4_hbo)))) %>%
-  group_by(block) %>%
-  summarise(num_na = sum(num_na, na.rm = TRUE)) %>%
+synchrony_data|>
+  filter(category == "Real Dyads")|>
+  dplyr::mutate(across(c("s1_d1_hbo":"s8_d4_hbo"), as.numeric))|>
+  rowwise()|>
+  mutate(num_na = sum(is.na(c_across(s1_d1_hbo:s8_d4_hbo))))|>
+  group_by(block)|>
+  summarise(num_na = sum(num_na, na.rm = TRUE))|>
   ungroup()
 ```
 
 ### Adding Lab ID
-1 = WUSTL
-0 = PSU
+
+1 = WUSTL 0 = PSU
+
 ```{r}
 # nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = #c("Block 2", "Block 1", "Block 3"))
-nirs_per_trial_plus_qst <- nirs_per_trial_plus_qst %>%
+nirs_per_trial_plus_qst <- nirs_per_trial_plus_qst|>
   mutate(
     block_2 = case_when(
       block == "Block 1" ~ 1,
@@ -383,35 +433,38 @@ nirs_per_trial_plus_qst <- nirs_per_trial_plus_qst %>%
       block == "Block 3" ~ 3
     ),
     block_sq = block_2^2
-  )
+  ) %>%
+  dplyr::filter(band == "old")
 
 
-nirs_per_trial_plus_qst <- nirs_per_trial_plus_qst %>%
+nirs_per_trial_plus_qst <- nirs_per_trial_plus_qst|>
   mutate(lab = case_when(
     record_id >= 1200 ~ 0,
     TRUE ~ 1
-  ))
+  ),
+  trial_num = parse_number(trial))
 ```
 
 ### Breaking apart datasets
 
 ```{r}
-block1 <- nirs_per_trial_plus_qst %>%
+block1 <- nirs_per_trial_plus_qst|>
   filter(block == "Block 1")
 
-block2 <- nirs_per_trial_plus_qst %>%
+block2 <- nirs_per_trial_plus_qst|>
   filter(block == "Block 2")
 
-block3 <- nirs_per_trial_plus_qst %>%
+block3 <- nirs_per_trial_plus_qst|>
   filter(block == "Block 3")
 ```
 
 ## Correlations
-p-values(0, 0.001, 0.01, 0.05, 0.1, 1) <=> symbols(“***”, “**”, “*”, “.”, " “)
 
+p-values(0, 0.001, 0.01, 0.05, 0.1, 1) \<=\> symbols(“***”, “**”, “*”,
+“.”, " “)
 
 ```{r}
-correlation_df <- block1 %>%
+correlation_df <- block1|>
   select(stai_trait, stai_state, cbq_effortful_control, cbq_fear, anxiety_c)
 
 chart.Correlation(correlation_df, histogram = TRUE, method = "pearson")
@@ -420,7 +473,7 @@ chart.Correlation(correlation_df, histogram = TRUE, method = "pearson")
 ### Correlations-block 1 neuro
 
 ```{r}
-correlation_df <- block1 %>%
+correlation_df <- block1|>
   select(stai_trait, stai_state, cbq_effortful_control, cbq_fear, anxiety_c, avg_score, DLPFC_avg_score, VLPFC_avg_score)
 
 chart.Correlation(correlation_df, histogram = TRUE, method = "pearson")
@@ -429,7 +482,7 @@ chart.Correlation(correlation_df, histogram = TRUE, method = "pearson")
 ### Correlations-block 2 neuro
 
 ```{r}
-correlation_df <- block2 %>%
+correlation_df <- block2|>
   select(stai_trait, stai_state, cbq_effortful_control, cbq_fear, anxiety_c, avg_score, DLPFC_avg_score, VLPFC_avg_score)
 
 chart.Correlation(correlation_df, histogram = TRUE, method = "pearson")
@@ -438,7 +491,7 @@ chart.Correlation(correlation_df, histogram = TRUE, method = "pearson")
 ### Correlations-block 3 neuro
 
 ```{r}
-correlation_df <- block3 %>%
+correlation_df <- block3|>
   select(stai_trait, stai_state, cbq_effortful_control, cbq_fear, anxiety_c, avg_score, DLPFC_avg_score, VLPFC_avg_score)
 
 chart.Correlation(correlation_df, histogram = TRUE, method = "pearson")
@@ -446,9 +499,9 @@ chart.Correlation(correlation_df, histogram = TRUE, method = "pearson")
 
 ### Multilevel Correlations
 
-```{r}
-mutilevel_cor_data <- nirs_per_trial_plus_qst %>%
-  select(block, trial, cbq_fear, cbq_effortful_control, anxiety_c, stai_state, stai_trait, avg_score, DLPFC_avg_score, VLPFC_avg_score) %>%
+```{r message=FALSE, warning=FALSE}
+mutilevel_cor_data <- nirs_per_trial_plus_qst|>
+  select(block, trial, cbq_fear, cbq_effortful_control, anxiety_c, stai_state, stai_trait, avg_score, DLPFC_avg_score, VLPFC_avg_score)|>
   mutate(
     block = as_factor(block),
     trial = as_factor(trial)
@@ -460,8 +513,9 @@ correlation::correlation(mutilevel_cor_data, multilevel = TRUE)
 ## Lab Comparisons
 
 there is no significant interaction between lab and blocks.
+
 ```{r}
-model0 <- lmer(avg_score ~ site + (1 + block | record_id) + (1 | trial),
+model0 <- lmer(avg_score ~ site + (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -471,7 +525,7 @@ model0 <- lmer(avg_score ~ site + (1 + block | record_id) + (1 | trial),
 summary(model0)
 report(model0)
 
-model00 <- lmer(DLPFC_avg_score ~ site + (1 + block | record_id) + (1 | trial),
+model00 <- lmer(DLPFC_avg_score ~ site + (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -482,7 +536,7 @@ summary(model00)
 report(model00)
 
 
-model000 <- lmer(avg_score ~ site + (1 + block | record_id) + (1 | trial),
+model000 <- lmer(VLPFC_avg_score ~ site + (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -498,32 +552,63 @@ report(model000)
 ### Main Models
 
 #### PFC
-```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
 
-model1 <- lmer(
+```{r}
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
+
+model1a <-lmer(
   avg_score ~
-    c_age_y_centered + block + c_sex + (1 + block | record_id) + (1 | trial),
+    c_age_y_centered + block + c_sex + (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
     optCtrl = list(maxfun = 5e5)
   )
 )
-summary(model1)
-report(model1)
+summary(model1a)
+report(model1a)
 
-performance::check_outliers(model1)
+
+
+
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+
+model1b <- lmer(
+  avg_score ~
+    c_age_y_centered + block + c_sex + (1 + block + trial_num | record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+summary(model1b)
+report(model1b)
+
+performance::check_outliers(model1b)
+
+##### Slope of EC for each block
+
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+
+#contrast(slopes, "poly") 
+## marginal means by Block and FDR-adjusted pairwise tests
+emm  <- emmeans(model1a, ~ block)
+pairs_block <- pairs(emm, adjust = "none")
+summary(emm)
+summary(pairs_block)
+confint(pairs_block) 
 ```
 
 #### DLPFC
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 1", "Block 2", "Block 3"))
 
 model2 <- lmer(
   DLPFC_avg_score ~
-    c_age_y_centered + block + c_sex + (1 + block | record_id) + (1 | trial),
+    c_age_y_centered + block + c_sex +  (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -535,16 +620,41 @@ summary(model2)
 report(model2)
 
 performance::check_outliers(model2)
+
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+
+model2b <- lmer(
+  DLPFC_avg_score ~
+    c_age_y_centered + block + c_sex + (1 + block + trial_num | record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+summary(model2b)
+report(model2b)
+
+performance::check_outliers(model2b)
+
+
+## marginal means by Block and FDR-adjusted pairwise tests
+emm  <- emmeans(model2, ~ block)
+pairs_block <- pairs(emm, adjust = "none")
+summary(emm)
+summary(pairs_block)
+confint(pairs_block) 
 ```
 
 #### VLPFC
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 1", "Block 2", "Block 3"))
 
 model3 <- lmer(
   VLPFC_avg_score ~
-    c_age_y_centered + block + c_sex + (1 + block | record_id) + (1 | trial),
+    c_age_y_centered + block + c_sex  + (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -556,16 +666,52 @@ summary(model3)
 report(model3)
 
 performance::check_outliers(model3)
+
+## marginal means by Block and FDR-adjusted pairwise tests
+emm  <- emmeans(model3, ~ block)
+pairs_block <- pairs(emm, adjust = "none")
+summary(emm)
+summary(pairs_block)
+confint(pairs_block)
+
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+
+model3b <- lmer(
+  VLPFC_avg_score ~
+    c_age_y_centered + block + c_sex  + (1 + block + trial_num | record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+summary(model3b)
+report(model3b)
 ```
 
 ### PFC Graph
 
 ```{r}
-synchrony_data$block <- factor(synchrony_data$block, levels = c("Block 1", "Block 2", "Block 3"))
+nirs_per_trial_plus_qst <- nirs_per_trial_plus_qst|>
+  mutate(new_block = case_when(
+    block == "Block 1" ~ "Free Play Block",
+    block == "Block 2" ~ "Stressful Block",
+    block == "Block 3" ~ "Recovery Block",
+    TRUE ~ "Error"
+  ),
+  new_block = as.factor(new_block)
+  )
 
-synchrony_data %>%
-  filter(category == "Real Dyads") %>%
-  ggplot(., aes(x = new_block, y = avg_score, fill = block, col = block)) +
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 1", "Block 2", "Block 3"))
+nirs_per_trial_plus_qst$new_block <- factor(nirs_per_trial_plus_qst$new_block, levels = c("Free Play Block", "Stressful Block", "Recovery Block"))
+
+
+nirs_per_trial_plus_qst %>%
+  group_by(record_id,block,new_block) %>%
+  dplyr::summarise(avg_score = mean(avg_score, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(., aes(x = new_block, y = avg_score, fill = new_block, col = new_block)) +
   scale_color_manual(
     name = "Block Type",
     values = c("#C85729", "#127088", "#92874B")
@@ -575,13 +721,16 @@ synchrony_data %>%
     values = c("#C85729", "#127088", "#92874B")
   ) +
   guides(fill = FALSE, col = FALSE) +
-  geom_rain(alpha = .5, rain.side = "f2x2", id.long.var = "record_id") +
+  geom_rain(alpha = .5, 
+            rain.side = "f2x2", 
+            id.long.var = "record_id",
+            quantiles = NULL) +
   ylab("Neural Synchrony Values (PFC)") +
   xlab("Block Type") +
   stat_summary(fun.data = "mean_cl_normal", geom = "errorbar", width = 1 / 4, color = "black") +
   stat_summary(fun = "mean", geom = "point", color = "black") +
   theme_apa() +
-  theme(text = element_text(size = 15))
+  theme(text = element_text(size = 15, family="Arial"))
 
 
 ggsave("figures/aim_1_block_synchrony_PFC.png", width = 7, height = 5)
@@ -590,9 +739,11 @@ ggsave("figures/aim_1_block_synchrony_PFC.png", width = 7, height = 5)
 ### DLPFC Graph
 
 ```{r}
-synchrony_data %>%
-  filter(category == "Real Dyads") %>%
-  ggplot(., aes(x = block, y = DLPFC_avg_score, fill = block, col = block)) +
+nirs_per_trial_plus_qst%>%
+  group_by(record_id,block,new_block) %>% 
+  dplyr::summarise(DLPFC_avg_score = mean(DLPFC_avg_score, na.rm = TRUE)) %>% 
+  ungroup()%>%
+  ggplot(., aes(x = new_block, y = DLPFC_avg_score, fill = new_block, col = new_block)) +
   scale_color_manual(
     name = "Block Type",
     values = c("#C85729", "#127088", "#92874B")
@@ -602,13 +753,16 @@ synchrony_data %>%
     values = c("#C85729", "#127088", "#92874B")
   ) +
   guides(fill = FALSE, col = FALSE) +
-  geom_rain(alpha = .5, rain.side = "f2x2", id.long.var = "record_id") +
+  geom_rain(alpha = .5, 
+            rain.side = "f2x2", 
+            id.long.var = "record_id",
+            quantiles = NULL) +
   ylab("Neural Synchrony Values (DLPFC)") +
   xlab("Play Block") +
   stat_summary(fun.data = "mean_cl_normal", geom = "errorbar", width = 1 / 4, color = "black") +
   stat_summary(fun = "mean", geom = "point", color = "black") +
   theme_apa() +
-  theme(text = element_text(size = 15))
+  theme(text = element_text(size = 15, family="Arial"))
 
 
 ggsave("figures/aim_1_block_synchrony_DLPFC.png", width = 7, height = 5)
@@ -617,9 +771,11 @@ ggsave("figures/aim_1_block_synchrony_DLPFC.png", width = 7, height = 5)
 ### VLPFC Graph
 
 ```{r}
-synchrony_data %>%
-  filter(category == "Real Dyads") %>%
-  ggplot(., aes(x = block, y = VLPFC_avg_score, fill = block, col = block)) +
+nirs_per_trial_plus_qst%>%
+  group_by(record_id,block,new_block) %>%
+  dplyr::summarise(VLPFC_avg_score = mean(VLPFC_avg_score, na.rm = TRUE)) %>%
+  ungroup()%>%
+  ggplot(., aes(x = new_block, y = VLPFC_avg_score, fill = new_block, col = new_block)) +
   scale_color_manual(
     name = "Block Type",
     values = c("#C85729", "#127088", "#92874B")
@@ -629,36 +785,31 @@ synchrony_data %>%
     values = c("#C85729", "#127088", "#92874B")
   ) +
   guides(fill = FALSE, col = FALSE) +
-  geom_rain(alpha = .5, rain.side = "f2x2", id.long.var = "record_id") +
+  geom_rain(alpha = .5, 
+            rain.side = "f2x2", 
+            id.long.var = "record_id",
+            quantiles = NULL) +
   ylab("Neural Synchrony Values (VLPFC)") +
   xlab("Play Block") +
   stat_summary(fun.data = "mean_cl_normal", geom = "errorbar", width = 1 / 4, color = "black") +
   stat_summary(fun = "mean", geom = "point", color = "black") +
   theme_apa() +
-  theme(text = element_text(size = 15))
+  theme(text = element_text(size = 15, family="Arial"))
 
 
 ggsave("figures/aim_1_block_synchrony_VLPFC.png", width = 7, height = 5)
 ```
 
 ### Graph per Trial
-Block 1:
-- Trial 1: Markers (fine)
-- Trial 2: Markers (dots)
-- Trial 3: Stickers (shapes)
-- Trial 4: Stickers (strips)
 
-Block 2:
-- Trial 1: Puzzle set 1
-- Trial 2: Puzzle set 2
-- Trial 3: Puzzle set 3
-- Trial 4: Puzzle set 4
+Block 1: - Trial 1: Markers (fine) - Trial 2: Markers (dots) - Trial 3:
+Stickers (shapes) - Trial 4: Stickers (strips)
 
-Block 3:
-- Trial 1: Magnatiles
-- Trial 2: Human and Animal connectors
-- Trial 3: Animals, trees, and fences
-- Trial 4: Cars, trucks
+Block 2: - Trial 1: Puzzle set 1 - Trial 2: Puzzle set 2 - Trial 3:
+Puzzle set 3 - Trial 4: Puzzle set 4
+
+Block 3: - Trial 1: Magnatiles - Trial 2: Human and Animal connectors -
+Trial 3: Animals, trees, and fences - Trial 4: Cars, trucks
 
 ```{r}
 synchrony_data_per_trial$trial <- as.factor(synchrony_data_per_trial$trial)
@@ -666,8 +817,8 @@ synchrony_data_per_trial$block <- as.factor(synchrony_data_per_trial$block)
 
 synchrony_data_per_trial$block <- factor(synchrony_data_per_trial$block, levels = c("Block 1", "Block 2", "Block 3"))
 
-synchrony_data_per_trial %>%
-  filter(category == "Real Dyads") %>%
+nirs_per_trial_plus_qst %>%
+  filter(category == "Real Dyads")%>%
   ggplot(., aes(x = trial, y = avg_score, fill = trial, col = trial)) +
   scale_fill_brewer(palette = "Dark2") +
   scale_colour_brewer(palette = "Dark2") +
@@ -679,35 +830,35 @@ synchrony_data_per_trial %>%
   stat_summary(fun = "mean", geom = "point", color = "black", na.rm = TRUE) +
   theme_apa() +
   theme(text = element_text(size = 20)) +
-  facet_wrap(~block) +
-  scale_y_continuous(limits = c(0.20, .6), breaks = seq(0.20, .6, by = 0.10)) # Setting Y-axis limits and ticks
+  facet_wrap(~new_block) +
+  scale_y_continuous(limits = c(0.2, .42), breaks = seq(0.2, .4, by = 0.10)) # Setting Y-axis limits and ticks
 
 ggsave("figures/aim_1_block_synchrony_per-trial_PFC.png", width = 14, height = 10)
 
 
-not_in_stream_df <- synchrony_data_per_trial %>%
-  filter(category == "Real Dyads") %>%
-  select(record_id, block, trial, DLPFC_avg_score) %>%
+not_in_stream_df <- nirs_per_trial_plus_qst|>
+  filter(category == "Real Dyads")|>
+  select(record_id, block, trial, DLPFC_avg_score)|>
   pivot_wider(
     names_from = trial,
     values_from = DLPFC_avg_score
-  ) %>%
-  rowwise() %>%
+  )|>
+  rowwise()|>
   mutate(
     pattern_found = check_sequence(c(`Trial 1`, `Trial 2`, `Trial 3`, `Trial 4`)),
     pattern_found = case_when(
       sum(is.na(c(`Trial 1`, `Trial 2`, `Trial 3`, `Trial 4`))) == 3 ~ TRUE,
       TRUE ~ pattern_found
     )
-  ) %>%
-  ungroup() %>%
-  filter(pattern_found) %>%
-  pivot_longer(cols = c("Trial 1":"Trial 4"), values_to = "DLPFC_avg_score", names_to = "trial") %>%
+  )|>
+  ungroup()|>
+  filter(pattern_found)|>
+  pivot_longer(cols = c("Trial 1":"Trial 4"), values_to = "DLPFC_avg_score", names_to = "trial")|>
   filter(!is.na(DLPFC_avg_score))
 
 
-synchrony_data_per_trial %>%
-  filter(category == "Real Dyads") %>%
+nirs_per_trial_plus_qst%>%
+  filter(category == "Real Dyads")%>%
   ggplot(., aes(x = trial, y = DLPFC_avg_score, fill = trial, col = trial)) +
   scale_fill_brewer(palette = "Dark2") +
   scale_colour_brewer(palette = "Dark2") +
@@ -720,34 +871,34 @@ synchrony_data_per_trial %>%
   stat_summary(fun = "mean", geom = "point", color = "black", na.rm = TRUE) +
   theme_apa() +
   theme(text = element_text(size = 20)) +
-  facet_wrap(~block) +
-  scale_y_continuous(limits = c(0.20, .6), breaks = seq(0.20, .6, by = 0.10)) # Setting Y-axis limits and ticks
+  facet_wrap(~new_block) +
+  scale_y_continuous(limits = c(0.2, .4), breaks = seq(0.2, .4, by = 0.10)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_1_block_synchrony_per-trial_DLPFC.png", width = 14, height = 10)
 
-not_in_stream_df <- synchrony_data_per_trial %>%
-  filter(category == "Real Dyads") %>%
-  select(record_id, block, trial, VLPFC_avg_score) %>%
+not_in_stream_df <- nirs_per_trial_plus_qst|>
+  filter(category == "Real Dyads")|>
+  select(record_id, block, trial, VLPFC_avg_score)|>
   pivot_wider(
     names_from = trial,
     values_from = VLPFC_avg_score
-  ) %>%
-  rowwise() %>%
+  )|>
+  rowwise()|>
   mutate(
     pattern_found = check_sequence(c(`Trial 1`, `Trial 2`, `Trial 3`, `Trial 4`)),
     pattern_found = case_when(
       sum(is.na(c(`Trial 1`, `Trial 2`, `Trial 3`, `Trial 4`))) == 3 ~ TRUE,
       TRUE ~ pattern_found
     )
-  ) %>%
-  ungroup() %>%
-  filter(pattern_found) %>%
-  pivot_longer(cols = c("Trial 1":"Trial 4"), values_to = "VLPFC_avg_score", names_to = "trial") %>%
+  )|>
+  ungroup()|>
+  filter(pattern_found)|>
+  pivot_longer(cols = c("Trial 1":"Trial 4"), values_to = "VLPFC_avg_score", names_to = "trial")|>
   filter(!is.na(VLPFC_avg_score))
 
-synchrony_data_per_trial %>%
-  filter(category == "Real Dyads") %>%
+nirs_per_trial_plus_qst%>%
+  filter(category == "Real Dyads")%>%
   ggplot(., aes(x = trial, y = VLPFC_avg_score, fill = trial, col = trial)) +
   scale_fill_brewer(palette = "Dark2") +
   scale_colour_brewer(palette = "Dark2") +
@@ -760,13 +911,12 @@ synchrony_data_per_trial %>%
   stat_summary(fun = "mean", geom = "point", color = "black") +
   theme_apa() +
   theme(text = element_text(size = 20)) +
-  facet_wrap(~block) +
-  scale_y_continuous(limits = c(0.20, .6), breaks = seq(0.20, .6, by = 0.10)) # Setting Y-axis limits and ticks
-
-
+  facet_wrap(~new_block) +
+  scale_y_continuous(limits = c(0.2, .4), breaks = seq(0.20, .4, by = 0.10)) # Setting Y-axis limits and ticks
+# 
+# 
 ggsave("figures/aim_1_block_synchrony_per-trial_VLPFC.png", width = 14, height = 10)
 ```
-
 
 ## Aim 2: To examine the relationship between child temperament and dyadic neural synchrony
 
@@ -775,11 +925,10 @@ ggsave("figures/aim_1_block_synchrony_per-trial_VLPFC.png", width = 14, height =
 #### Model -block 2 reference
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 2", "Block 1"))
 
 model1 <- lmer(
-  avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + (1 + block | record_id) + (1 | trial),
+  avg_score ~ c_age_y_centered + c_sex + cbq_fear * block + cbq_effortful_control * block  + (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -789,21 +938,25 @@ model1 <- lmer(
 
 summary(model1)
 
+
+
 # emm = emmeans(model1, ~ cbq_effortful_control*block )
 # pairs(emm)
 # # or for simple comparisons
 # #pairs(emm, simple = "each")
 
-anova(model1, type = "III")
-report(model1)
+#anova(model1, type = "III")
+#report(model1)
 
 performance::check_outliers(model1)
 
 nirs_per_trial_plus_qst$block_numeric <- as.numeric(nirs_per_trial_plus_qst$block)
 
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 1", "Block 2", "Block 3"))
+
+
 model1b <- lmer(
-  avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block_numeric + cbq_effortful_control * block_numeric + (1 + block | record_id) + (1 | trial),
+  avg_score ~ c_age_y_centered + c_sex + cbq_fear * block + cbq_effortful_control * block  + (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -812,7 +965,7 @@ model1b <- lmer(
 )
 
 summary(model1b)
-report(model1b)
+report(model1)
 ```
 
 ##### Report
@@ -821,8 +974,8 @@ report(model1b)
 tab_model(model1, p.val = "kr", show.df = TRUE)
 ```
 
-
 #### Simple intercepts and slopes
+
 ```{r}
 sim_slopes(model1,
   pred = cbq_effortful_control, modx = block, cond.int = TRUE,
@@ -830,11 +983,42 @@ sim_slopes(model1,
 )
 ```
 
+##### Slope of EC for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model1, ~ block, var = "cbq_effortful_control")
+summary(slopes,, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  
+contrast(slopes, "poly") 
+```
+
+##### Slope of Fear for each block
+
+```{r}
+# Slope of EC for each block
+slopes <- emtrends(model1, specs = ~ block, var = "cbq_fear")
+summary(slopes)
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+```
+
 #### Interaction Plot
+
 ```{r}
 interact_plot(model1,
   pred = cbq_effortful_control, modx = block,
   x.label = "Effortful Control", y.label = "PFC Synchrony Scores",
+  legend.main = "Block"
+)
+
+interact_plot(model1,
+  pred = cbq_fear, modx = block,
+  x.label = "Fear", y.label = "PFC Synchrony Scores",
   legend.main = "Block"
 )
 ```
@@ -845,13 +1029,15 @@ interact_plot(model1,
 interaction_eff1 <- ggpredict(model1, c("cbq_effortful_control", "block"))
 interaction_eff1
 
+interaction_eff1$group <- factor(interaction_eff1$group, levels = c("Block 1", "Block 2", "Block 3"))
+
 ggplot(interaction_eff1, aes(x, predicted, color = group)) +
-  geom_line(linewidth = 1.2) +
+  geom_line(linewidth = 1.1) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.2, color = NA) +
   theme_classic() +
   scale_color_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -860,15 +1046,12 @@ ggplot(interaction_eff1, aes(x, predicted, color = group)) +
   ) +
   scale_fill_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
       "Block 3" = "Recovery"
     )
-  ) +
-  scale_x_continuous(
-    name = "Effortful Control (CBQ scores)"
   ) +
   theme(
     axis.text = element_text(size = 19),
@@ -877,25 +1060,29 @@ ggplot(interaction_eff1, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "PFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  theme(text = element_text( family="Arial")) +
+  scale_y_continuous(name = "PFC Neural Synchrony (predicted)", limits = c(0.22, .3), breaks = seq(0.22, .3, by = 0.02)) + # Setting Y-axis limits and ticks
+  scale_x_continuous(name = "Effortful Control (CBQ scores)", limits = c(3, 6), breaks = seq(3, 6, by = 1)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_2_EC-Block_PFC.png", width = 10, height = 8)
 ```
 
-#### Plot for interaction: F*Block
+#### Plot for interaction: F\*Block
 
 ```{r}
 interaction_eff1b <- ggpredict(model1, c("cbq_fear", "block"))
 interaction_eff1b
 
+interaction_eff1b$group <- factor(interaction_eff1b$group, levels = c("Block 1", "Block 2", "Block 3"))
+
 ggplot(interaction_eff1b, aes(x, predicted, color = group)) +
-  geom_line(linewidth = 1.2) +
+  geom_line(linewidth = 1.1) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.2, color = NA) +
   theme_classic() +
   scale_color_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -904,7 +1091,7 @@ ggplot(interaction_eff1b, aes(x, predicted, color = group)) +
   ) +
   scale_fill_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -921,7 +1108,8 @@ ggplot(interaction_eff1b, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "PFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+    theme(text = element_text(family="Arial")) +
+  scale_y_continuous(name = "PFC Neural Synchrony (predicted)", limits = c(0.22, .3), breaks = seq(0.22, .3, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_2_F-Block_PFC.png", width = 10, height = 8)
@@ -932,11 +1120,11 @@ ggsave("figures/aim_2_F-Block_PFC.png", width = 10, height = 8)
 #### Model-block 2 reference
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
 
 model2 <- lmer(
   DLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block  + (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -950,17 +1138,17 @@ report(model2)
 emm <- emmeans(model2, ~ cbq_effortful_control * block)
 pairs(emm)
 # or for simple comparisons
-# pairs(emm, simple = "each")
+pairs(emm, simple = "each")
 ```
 
-#### Model-block 3 reference
+#### Model-block 1 reference
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 1", "Block 2", "Block 3"))
 
 model2b <- lmer(
   DLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -971,6 +1159,8 @@ model2b <- lmer(
 summary(model2b)
 report(model2b)
 
+
+
 emm <- emmeans(model2b, ~ cbq_effortful_control * block)
 pairs(emm)
 # or for simple comparisons
@@ -979,11 +1169,39 @@ pairs(emm)
 report(anova(model2b, type = "III"))
 ```
 
+##### Slope of EC for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model2b, ~ block, var = "cbq_effortful_control")
+summary(slopes,, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+contrast(slopes, "poly") 
+```
+
+##### Slope of Fear for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model2b, ~ block, var = "cbq_fear")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+contrast(slopes, "poly") 
+```
+
 #### Simple intercepts & slopes: EC*Block
 
 ```{r}
-interaction_eff2 <- ggpredict(model2, c("cbq_effortful_control", "block"))
+interaction_eff2 <- ggpredict(model2b, c("cbq_effortful_control", "block"))
 interaction_eff2
+
+interaction_eff2$group <- factor(interaction_eff2$group, levels = c("Block 1", "Block 2", "Block 3"))
 
 ggplot(interaction_eff2, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -991,7 +1209,7 @@ ggplot(interaction_eff2, aes(x, predicted, color = group)) +
   theme_classic() +
   scale_color_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -1000,7 +1218,7 @@ ggplot(interaction_eff2, aes(x, predicted, color = group)) +
   ) +
   scale_fill_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -1016,17 +1234,20 @@ ggplot(interaction_eff2, aes(x, predicted, color = group)) +
     legend.text = element_text(size = 19),
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
-  ) +
-  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  )  +
+    theme(text = element_text(family="Arial")) +
+  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.22, .3), breaks = seq(0.22, .3, by = 0.02)) # Setting Y-axis limits and ticks
 
 ggsave("figures/aim_2_EC-Block_DLPFC.png", width = 10, height = 8)
 ```
 
-#### Simple intercepts & slopes: F*Block
+#### Simple intercepts & slopes: F\*Block
 
 ```{r}
-interaction_eff3 <- ggpredict(model2, c("cbq_fear", "block"))
+interaction_eff3 <- ggpredict(model2b, c("cbq_fear", "block"))
 interaction_eff3
+
+interaction_eff3$group <- factor(interaction_eff3$group, levels = c("Block 1", "Block 2", "Block 3"))
 
 ggplot(interaction_eff3, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1034,7 +1255,7 @@ ggplot(interaction_eff3, aes(x, predicted, color = group)) +
   theme_classic() +
   scale_color_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -1043,7 +1264,7 @@ ggplot(interaction_eff3, aes(x, predicted, color = group)) +
   ) +
   scale_fill_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -1060,7 +1281,8 @@ ggplot(interaction_eff3, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+    theme(text = element_text(family="Arial")) +
+  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.22, .3), breaks = seq(0.22, .3, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_2_F-Block_DLPFC.png", width = 10, height = 8)
@@ -1068,14 +1290,14 @@ ggsave("figures/aim_2_F-Block_DLPFC.png", width = 10, height = 8)
 
 ### VLPFC
 
-#### Model
+#### Model- block 2 reference
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
 
 model3 <- lmer(
   VLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block  + (1 + block +trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1084,6 +1306,7 @@ model3 <- lmer(
 )
 
 summary(model3)
+performance::check_outliers(model3)
 
 emm <- emmeans(model3, ~ cbq_effortful_control * block)
 pairs(emm)
@@ -1094,13 +1317,31 @@ emm <- emmeans(model3, ~ cbq_fear * block)
 pairs(emm)
 
 report(model3)
+
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 1", "Block 2", "Block 3"))
+
+model3b <- lmer(
+  VLPFC_avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block  + (1 + block +trial_num | record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+summary(model3b)
+report(model3b)
 ```
 
-#### Simple intercepts & slops: EC*Block
+#### Simple intercepts & slops: EC\*Block
 
 ```{r}
 interaction_eff4 <- ggpredict(model3, c("cbq_effortful_control", "block"))
 interaction_eff4
+
+interaction_eff4$group <- factor(interaction_eff4$group, levels = c("Block 1", "Block 2", "Block 3"))
+
 
 ggplot(interaction_eff4, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1108,7 +1349,7 @@ ggplot(interaction_eff4, aes(x, predicted, color = group)) +
   theme_classic() +
   scale_color_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -1117,7 +1358,7 @@ ggplot(interaction_eff4, aes(x, predicted, color = group)) +
   ) +
   scale_fill_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -1134,17 +1375,20 @@ ggplot(interaction_eff4, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+    theme(text = element_text(family="Arial")) +
+  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.22, .3), breaks = seq(0.22, .3, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_2_EC-Block_VLPFC.png.png", width = 10, height = 8)
 ```
 
-#### Simple intercepts & slopes: F*Block
+#### Simple intercepts & slopes: F\*Block
 
 ```{r}
 interaction_eff5 <- ggpredict(model3, c("cbq_fear", "block"))
 interaction_eff5
+
+interaction_eff5$group <- factor(interaction_eff5$group, levels = c("Block 1", "Block 2", "Block 3"))
 
 ggplot(interaction_eff5, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1152,7 +1396,7 @@ ggplot(interaction_eff5, aes(x, predicted, color = group)) +
   theme_classic() +
   scale_color_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -1161,7 +1405,7 @@ ggplot(interaction_eff5, aes(x, predicted, color = group)) +
   ) +
   scale_fill_manual(
     name = "Block Type",
-    values = natparks.pals("Saguaro", 3),
+    values = c("#C85729", "#127088", "#92874B"),
     labels = c(
       "Block 1" = "Baseline",
       "Block 2" = "Stressful",
@@ -1178,16 +1422,43 @@ ggplot(interaction_eff5, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+    theme(text = element_text(family="Arial")) +
+  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.22, .3), breaks = seq(0.22, .3, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_2_F-Block_VLPFC.png", width = 10, height = 8)
 ```
 
+##### Slope of EC for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3, ~ block, var = "cbq_effortful_control")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+contrast(slopes, "poly") 
+```
+
+##### Slope of Fear for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3, ~ block, var = "cbq_fear")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+contrast(slopes, "poly") 
+```
+
 ### Report
 
 ```{r}
-tab_model(model1, model2, model3, p.val = "kr", show.df = TRUE, collapse.ci = TRUE, p.style = "stars", digits = 3)
+tab_model(model1, model2, model3, p.val = "kr", show.df = TRUE, collapse.ci = TRUE, p.style = "stars", digits = 4)
 ```
 
 ## 3. To examine the relationship between child temperament, anxiety, and dyadic neural synchrony
@@ -1201,33 +1472,35 @@ descriptives_a <- nirs_per_trial_plus_qst %>%
   select(record_id, block, trial, avg_score, DLPFC_avg_score, VLPFC_avg_score) %>%
   group_by(block) %>%
   summarise(
-    PFC_mean = round(mean(avg_score, na.rm = TRUE), 2),
-    DLPFC_mean = round(mean(DLPFC_avg_score, na.rm = TRUE), 2),
-    VLPFC_mean = round(mean(VLPFC_avg_score, na.rm = TRUE), 2),
-    PFC_sd = round(sd(avg_score, na.rm = TRUE), 2),
-    DLPFC_sd = round(sd(DLPFC_avg_score, na.rm = TRUE), 2),
-    VLPFC_sd = round(sd(VLPFC_avg_score, na.rm = TRUE), 2),
-    PFC_min = round(min(avg_score, na.rm = TRUE), 2),
-    DLPFC_min = round(min(DLPFC_avg_score, na.rm = TRUE), 2),
-    VLPFC_min = round(min(VLPFC_avg_score, na.rm = TRUE), 2),
-    PFC_max = round(max(avg_score, na.rm = TRUE), 2),
-    DLPFC_max = round(max(DLPFC_avg_score, na.rm = TRUE), 2),
-    VLPFC_max = round(max(VLPFC_avg_score, na.rm = TRUE), 2)
+    PFC_mean = round(mean(avg_score, na.rm = TRUE), 3),
+    DLPFC_mean = round(mean(DLPFC_avg_score, na.rm = TRUE), 3),
+    VLPFC_mean = round(mean(VLPFC_avg_score, na.rm = TRUE), 3),
+    PFC_sd = round(sd(avg_score, na.rm = TRUE), 3),
+    DLPFC_sd = round(sd(DLPFC_avg_score, na.rm = TRUE), 3),
+    VLPFC_sd = round(sd(VLPFC_avg_score, na.rm = TRUE), 3),
+    PFC_min = round(min(avg_score, na.rm = TRUE), 3),
+    DLPFC_min = round(min(DLPFC_avg_score, na.rm = TRUE), 3),
+    VLPFC_min = round(min(VLPFC_avg_score, na.rm = TRUE), 3),
+    PFC_max = round(max(avg_score, na.rm = TRUE), 3),
+    DLPFC_max = round(max(DLPFC_avg_score, na.rm = TRUE), 3),
+    VLPFC_max = round(max(VLPFC_avg_score, na.rm = TRUE), 3)
   ) %>%
   ungroup() %>%
   pivot_longer(PFC_mean:VLPFC_max, names_to = c("ROI", "stat"), names_sep = "_", values_to = "value") %>%
   arrange(ROI) %>%
   unite("name", c("ROI", "block"))
 
-block1 %>%
+
+nirs_per_trial_plus_qst %>%
+  distinct(record_id,.keep_all = TRUE) %>%
   select(stai_trait, stai_state, cbq_effortful_control, cbq_fear, anxiety_c) %>%
   pivot_longer(stai_trait:anxiety_c, names_to = "name", values_to = "value") %>%
   group_by(name) %>%
   summarize(
-    mean = round(mean(value, na.rm = TRUE), 2),
-    sd = round(sd(value, na.rm = TRUE), 2),
-    min = round(min(value, na.rm = TRUE), 2),
-    max = round(max(value, na.rm = TRUE), 2)
+    mean = round(mean(value, na.rm = TRUE), 3),
+    sd = round(sd(value, na.rm = TRUE), 3),
+    min = round(min(value, na.rm = TRUE), 3),
+    max = round(max(value, na.rm = TRUE), 3)
   ) %>%
   pivot_longer(mean:max, names_to = "stat", values_to = "value") %>%
   rbind(descriptives_a) %>%
@@ -1242,12 +1515,23 @@ block1 %>%
 ```
 
 ### Correlations
-
-#### Table
-
+#### Overall
 ```{r}
-corr_df <- block1 %>%
-  select(stai_trait, stai_state, cbq_effortful_control, cbq_fear, anxiety_c, c_age_m)
+avg <- nirs_per_trial_plus_qst|>
+  select(record_id, block,avg_score, DLPFC_avg_score,VLPFC_avg_score) |> 
+  group_by(record_id,block) |> 
+  summarise(average = mean(avg_score, na.rm = TRUE),
+            dlpfc_average = mean(DLPFC_avg_score, na.rm = TRUE),
+            vlpfc_average = mean(VLPFC_avg_score, na.rm = TRUE)) |> 
+  ungroup() |> 
+  pivot_wider(names_from = "block", values_from = c("average","dlpfc_average","vlpfc_average"), names_prefix = "synchrony_") |> 
+  janitor::clean_names()
+  
+
+corr_df <- nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = FALSE) |> 
+  left_join(avg)|> 
+  select(-c(record_id)) 
 
 # ++++++++++++++++++++++++++++
 # flattenCorrMatrix
@@ -1260,43 +1544,162 @@ flattenCorrMatrix <- function(cormat, pmat) {
     row = rownames(cormat)[row(cormat)[ut]],
     column = rownames(cormat)[col(cormat)[ut]],
     cor = round((cormat)[ut], 2),
-    p = round(pmat[ut], 6)
+    p = round(pmat[ut],9)
   )
 }
 res2 <- rcorr(as.matrix(corr_df))
 res3 <- flattenCorrMatrix(res2$r, res2$P)
 
-res3 %>%
-  mutate(test = paste0("r = ", cor, ", p = ", p)) %>%
-  select(row, column, test) %>%
+res3|>
+  mutate(test = paste0("r = ", cor, ", p = ", p))|>
+  select(row, column, test)|>
   pivot_wider(names_from = column, values_from = test)
 ```
 
-#### Individual
+#### Table with PFC
 
 ```{r}
-report(cor.test(block1$stai_state, block1$anxiety_c, method = "pearson", conf.level = 0.95))
-report(cor.test(block1$stai_state, block1$cbq_effortful_control, method = "pearson", conf.level = 0.95))
-report(cor.test(block1$stai_state, block1$cbq_fear, method = "pearson", conf.level = 0.95))
-report(cor.test(block1$stai_trait, block1$anxiety_c, method = "pearson", conf.level = 0.95))
-report(cor.test(block1$stai_trait, block1$cbq_effortful_control, method = "pearson", conf.level = 0.95))
-report(cor.test(block1$stai_trait, block1$cbq_fear, method = "pearson", conf.level = 0.95))
-report(cor.test(block1$cbq_fear, block1$cbq_effortful_control, method = "pearson", conf.level = 0.95))
-report(cor.test(block1$stai_state, block1$stai_trait, method = "pearson", conf.level = 0.95))
-report(cor.test(block1$anxiety_c, block1$cbq_fear, method = "pearson", conf.level = 0.95))
-report(cor.test(block1$anxiety_c, block1$cbq_effortful_control, method = "pearson", conf.level = 0.95))
+avg <- nirs_per_trial_plus_qst|>
+  group_by(record_id,block) |> 
+  summarise(average = mean(avg_score, na.rm = TRUE)) |> 
+  ungroup() |> 
+  pivot_wider(names_from = "block", values_from = "average", names_prefix = "synchrony_") |> 
+  janitor::clean_names()
+  
+
+corr_df <- nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE) |> 
+  left_join(avg)|> 
+  select(stai_trait, stai_state, cbq_effortful_control, cbq_fear, anxiety_c, c_age_m,synchrony_block_1,synchrony_block_2,synchrony_block_3) 
+
+# ++++++++++++++++++++++++++++
+# flattenCorrMatrix
+# ++++++++++++++++++++++++++++
+# cormat : matrix of the correlation coefficients
+# pmat : matrix of the correlation p-values
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor = round((cormat)[ut], 2),
+    p = round(pmat[ut],9)
+  )
+}
+res2 <- rcorr(as.matrix(corr_df))
+res3 <- flattenCorrMatrix(res2$r, res2$P)
+
+res3|>
+  mutate(test = paste0("r = ", cor, ", p = ", p))|>
+  select(row, column, test)|>
+  pivot_wider(names_from = column, values_from = test)
+```
+#### Table with DLPFC
+
+```{r}
+dlpfc_avg <- nirs_per_trial_plus_qst|>
+  group_by(record_id,block) |> 
+  summarise(average = mean(DLPFC_avg_score, na.rm = TRUE)) |> 
+  ungroup() |> 
+  pivot_wider(names_from = "block", values_from = "average", names_prefix = "synchrony_") |> 
+  janitor::clean_names()
+  
+
+corr_df <- nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE) |> 
+  left_join(dlpfc_avg)|> 
+  select(stai_trait, stai_state, cbq_effortful_control, cbq_fear, anxiety_c, c_age_m,synchrony_block_1,synchrony_block_2,synchrony_block_3) 
+
+# ++++++++++++++++++++++++++++
+# flattenCorrMatrix
+# ++++++++++++++++++++++++++++
+# cormat : matrix of the correlation coefficients
+# pmat : matrix of the correlation p-values
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor = round((cormat)[ut], 2),
+    p = round(pmat[ut],9)
+  )
+}
+res2 <- rcorr(as.matrix(corr_df))
+res3 <- flattenCorrMatrix(res2$r, res2$P)
+
+res3|>
+  mutate(test = paste0("r = ", cor, ", p = ", p))|>
+  select(row, column, test)|>
+  pivot_wider(names_from = column, values_from = test)
+```
+#### Table with VLPFC
+
+```{r}
+vlpfc_avg <- nirs_per_trial_plus_qst|>
+  group_by(record_id,block) |> 
+  summarise(average = mean(VLPFC_avg_score, na.rm = TRUE)) |> 
+  ungroup() |> 
+  pivot_wider(names_from = "block", values_from = "average", names_prefix = "synchrony_") |> 
+  janitor::clean_names()
+  
+
+corr_df <- nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE) |> 
+  left_join(vlpfc_avg)|> 
+  select(stai_trait, stai_state, cbq_effortful_control, cbq_fear, anxiety_c, c_age_m,synchrony_block_1,synchrony_block_2,synchrony_block_3) 
+
+# ++++++++++++++++++++++++++++
+# flattenCorrMatrix
+# ++++++++++++++++++++++++++++
+# cormat : matrix of the correlation coefficients
+# pmat : matrix of the correlation p-values
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor = round((cormat)[ut], 2),
+    p = round(pmat[ut],9)
+  )
+}
+res2 <- rcorr(as.matrix(corr_df))
+res3 <- flattenCorrMatrix(res2$r, res2$P)
+
+res3|>
+  mutate(test = paste0("r = ", cor, ", p = ", p))|>
+  select(row, column, test)|>
+  pivot_wider(names_from = column, values_from = test)
+```
+#### Individual
+
+```{r message=FALSE, warning=FALSE}
+correlation_df <- nirs_per_trial_plus_qst|>
+  distinct(record_id, .keep_all = TRUE) |> 
+  select(stai_state,stai_trait,anxiety_c,cbq_effortful_control,cbq_fear)
+
+
+report(cor.test(correlation_df$stai_state, correlation_df$anxiety_c, method = "pearson", conf.level = 0.95))
+report(cor.test(correlation_df$stai_state, correlation_df$cbq_effortful_control, method = "pearson", conf.level = 0.95))
+report(cor.test(correlation_df$stai_state, correlation_df$cbq_fear, method = "pearson", conf.level = 0.95))
+report(cor.test(correlation_df$stai_trait, correlation_df$anxiety_c, method = "pearson", conf.level = 0.95))
+report(cor.test(correlation_df$stai_trait, correlation_df$cbq_effortful_control, method = "pearson", conf.level = 0.95))
+report(cor.test(correlation_df$stai_trait, correlation_df$cbq_fear, method = "pearson", conf.level = 0.95))
+report(cor.test(correlation_df$cbq_fear, correlation_df$cbq_effortful_control, method = "pearson", conf.level = 0.95))
+report(cor.test(correlation_df$stai_state, correlation_df$stai_trait, method = "pearson", conf.level = 0.95))
+report(cor.test(correlation_df$anxiety_c, correlation_df$cbq_fear, method = "pearson", conf.level = 0.95))
+report(cor.test(correlation_df$anxiety_c, correlation_df$cbq_effortful_control, method = "pearson", conf.level = 0.95))
 ```
 
 ### PFC
 
-#### State - Model -block 2 reference
+#### State - Model -block 1 reference
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
 
 model3_1 <- lmer(
   avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_state * block + (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_state * block   +(1 + block + trial_num | record_id) ,
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1316,7 +1719,7 @@ report(model3_1)
 
 model3_1_x <- lmer(
   avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state * block + (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state * block  +(1 + block +trial_num | record_id) ,
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1325,7 +1728,7 @@ model3_1_x <- lmer(
 )
 model3_1_y <- lmer(
   avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state + (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state +(1 + block + trial_num| record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1334,21 +1737,52 @@ model3_1_y <- lmer(
 )
 
 performance::compare_performance(model3_1, model3_1_x, model3_1_y)
+summary(model3_1_y)
+report(model3_1_y)
+### model_3_1 is the best model <- this was before correction
+### model_3_1_y
+```
+##### Block 2 reference
+```{r}
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
 
-### model_3_1 is the best model <-
+model3_1_y_b <- lmer(
+  avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state +(1 + block + trial_num| record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+report(model3_1_y_b)
 ```
 
 ##### Report
 
 ```{r}
-tab_model(model3_1, p.val = "kr", show.df = TRUE)
+model3_1_y_for_report <- lmer(
+  avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state + (1 + block + trial| record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+summary(model3_1_y_for_report)
+tab_model(model3_1_y_for_report, p.val = "kr", show.df = TRUE)
 ```
 
 ##### Plot for interaction: EC
 
 ```{r}
-interaction_eff3_1 <- ggpredict(model3_1, c("cbq_effortful_control", "block"))
+interaction_eff3_1 <- ggpredict(model3_1_y, c("cbq_effortful_control", "block"))
 interaction_eff3_1
+
+interaction_eff3_1$group <- factor(interaction_eff3_1$group, levels = c("Block 2", "Block 1", "Block 3"))
 
 ggplot(interaction_eff3_1, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1382,21 +1816,47 @@ ggplot(interaction_eff3_1, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "PFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  scale_y_continuous(name = "PFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_3_EC-Block_state_PFC.png", width = 10, height = 8)
 ```
 
-#### Trait - Model -block 2 reference
+##### Slope of EC for each block
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_1_y, ~ block, var = "cbq_effortful_control")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+contrast(slopes, "poly") 
+```
+
+##### Slope of Fear for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_1_y, ~ block, var = "cbq_fear")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+contrast(slopes, "poly") 
+```
+
+#### Trait - Model -block 3 reference
+
+```{r}
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
 
 model3_2 <- lmer(
   avg_score ~ c_age_y_centered +
     c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_trait * block +
-    (1 + block | record_id) + (1 | trial),
+    (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1418,8 +1878,8 @@ performance::check_outliers(model3_2)
 
 model3_2_x <- lmer(
   avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait * block +
-    (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait * block  +
+    (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1428,8 +1888,8 @@ model3_2_x <- lmer(
 )
 model3_2_y <- lmer(
   avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait +
-    (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait  +
+    (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1438,13 +1898,44 @@ model3_2_y <- lmer(
 )
 
 performance::compare_performance(model3_2, model3_2_x, model3_2_y)
+summary(model3_2_y)
+### model3_2 is the best model <- this was before correction
+### model3_2_y
+```
+
+##### Slope of EC for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_2_y, ~ block, var = "cbq_effortful_control")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+contrast(slopes, "poly") 
+```
+
+##### Slope of Fear for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_2_y, ~ block, var = "cbq_fear")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+contrast(slopes, "poly") 
 ```
 
 ##### Plot for interaction: EC
 
 ```{r}
-interaction_eff3_2 <- ggpredict(model3_2, c("cbq_effortful_control", "block"))
+interaction_eff3_2 <- ggpredict(model3_2_y, c("cbq_effortful_control", "block"))
 interaction_eff3_2
+
+interaction_eff3_2$group <- factor(interaction_eff3_2$group, levels = c("Block 2", "Block 1", "Block 3"))
 
 ggplot(interaction_eff3_2, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1478,72 +1969,19 @@ ggplot(interaction_eff3_2, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "PFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  scale_y_continuous(name = "PFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_3_EC-Block_trait_PFC.png", width = 10, height = 8)
 ```
 
-### DLPFC
-
-#### State - Model -block 2 reference
+##### Plot for interaction: F
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
-
-model3_3 <- lmer(
-  DLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_state * block
-    + (1 + block | record_id) + (1 | trial),
-  data = nirs_per_trial_plus_qst,
-  control = lmerControl(
-    optimizer = "bobyqa",
-    optCtrl = list(maxfun = 5e5)
-  )
-)
-
-summary(model3_3)
-
-# emm = emmeans(model3_3, ~ cbq_effortful_control*block )
-# pairs(emm)
-# # or for simple comparisons
-# #pairs(emm, simple = "each")
-
-anova(model3_3, type = "III")
-report(model3_3)
-
-model3_3_x <- lmer(
-  DLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state * block +
-    (1 + block | record_id) + (1 | trial),
-  data = nirs_per_trial_plus_qst,
-  control = lmerControl(
-    optimizer = "bobyqa",
-    optCtrl = list(maxfun = 5e5)
-  )
-)
-
-model3_3_y <- lmer(
-  DLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state +
-    (1 + block | record_id) + (1 | trial),
-  data = nirs_per_trial_plus_qst,
-  control = lmerControl(
-    optimizer = "bobyqa",
-    optCtrl = list(maxfun = 5e5)
-  )
-)
-
-performance::compare_performance(model3_3, model3_3_x, model3_3_y)
-
-## best model is model3_3
-```
-
-##### Plot for interaction: Fear
-
-```{r}
-interaction_eff3_3 <- ggpredict(model3_3, c("cbq_fear", "block"))
+interaction_eff3_3 <- ggpredict(model3_2_y, c("cbq_fear", "block"))
 interaction_eff3_3
+
+interaction_eff3_3$group <- factor(interaction_eff3_3$group, levels = c("Block 2", "Block 1", "Block 3"))
 
 ggplot(interaction_eff3_3, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1577,20 +2015,23 @@ ggplot(interaction_eff3_3, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  scale_y_continuous(name = "PFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
 
 
-ggsave("figures/aim_3_F-Block_state_DLPFC.png", width = 10, height = 8)
+ggsave("figures/aim_3_F-Block_trait_PFC.png", width = 10, height = 8)
 ```
 
-#### Trait - Model -block 2 reference
+### DLPFC
+
+#### State - Model -block 3 reference
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
 
-model3_4 <- lmer(
+model3_3 <- lmer(
   DLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_trait * block + (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_state * block
+    + (1 + block + trial_num | record_id) ,
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1598,23 +2039,224 @@ model3_4 <- lmer(
   )
 )
 
-summary(model3_4)
 
-# emm = emmeans(model3_4, ~ cbq_effortful_control*block )
+
+model3_3_x <- lmer(
+  DLPFC_avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state * block  + 
+    (1 + block + trial_num | record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+model3_3_y <- lmer(
+  DLPFC_avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state + 
+    (1 + block + trial_num | record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "nlminbwrap",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+performance::compare_performance(model3_3, model3_3_x, model3_3_y)
+
+## best model is model3_3 <- this was before correction
+## best model is model3_3_y
+summary(model3_3_y)
+
+# emm = emmeans(model3_3, ~ cbq_effortful_control*block )
 # pairs(emm)
 # # or for simple comparisons
 # #pairs(emm, simple = "each")
 
-anova(model3_4, type = "III")
-report(model3_4)
+anova(model3_3_y, type = "III")
+report(model3_3_y)
+```
+###### Model Block 2 Reference
+```{r}
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
 
-performance::check_outliers(model3_4)
+model3_3_y_b <- lmer(
+  DLPFC_avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state + 
+    (1 + block + trial_num | record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "nlminbwrap",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+report(model3_3_y_b)
+
+```
+
+###### Model Block 1 Reference
+```{r}
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 1", "Block 2", "Block 3"))
+
+model3_3_y_c <- lmer(
+  DLPFC_avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state + 
+    (1 + block + trial_num | record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "nlminbwrap",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+report(model3_3_y_c)
+
+```
+
+
+##### Slope of EC for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_3_y, ~ block, var = "cbq_effortful_control")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+```
+
+##### Slope of Fear for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_3_y, ~ block, var = "cbq_fear")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+contrast(slopes, "poly") 
+```
+
+##### Plot for interaction: EC
+
+```{r}
+interaction_eff3_3 <- ggpredict(model3_3_y, c("cbq_effortful_control", "block"))
+interaction_eff3_3
+
+interaction_eff3_3$group <- factor(interaction_eff3_3$group, levels = c("Block 2", "Block 1", "Block 3"))
+
+
+ggplot(interaction_eff3_3, aes(x, predicted, color = group)) +
+  geom_line(linewidth = 1.2) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.2, color = NA) +
+  theme_classic() +
+  scale_color_manual(
+    name = "Block Type",
+    values = natparks.pals("Saguaro", 3),
+    labels = c(
+      "Block 1" = "Baseline",
+      "Block 2" = "Stressful",
+      "Block 3" = "Recovery"
+    )
+  ) +
+  scale_fill_manual(
+    name = "Block Type",
+    values = natparks.pals("Saguaro", 3),
+    labels = c(
+      "Block 1" = "Baseline",
+      "Block 2" = "Stressful",
+      "Block 3" = "Recovery"
+    )
+  ) +
+  scale_x_continuous(
+    name = "Effortful Control (CBQ scores)"
+  ) +
+  theme(
+    axis.text = element_text(size = 19),
+    axis.title = element_text(size = 20),
+    legend.text = element_text(size = 19),
+    legend.title = element_text(face = "bold", size = 19),
+    legend.title.align = 0.5
+  ) +
+  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
+
+
+ggsave("figures/aim_3_EC-Block_state_DLPFC.png", width = 10, height = 8)
+```
+
+##### Plot for interaction: Fear
+
+```{r}
+interaction_eff3_3 <- ggpredict(model3_3_y, c("cbq_fear", "block"))
+interaction_eff3_3
+
+interaction_eff3_3$group <- factor(interaction_eff3_3$group, levels = c("Block 2", "Block 1", "Block 3"))
+
+
+ggplot(interaction_eff3_3, aes(x, predicted, color = group)) +
+  geom_line(linewidth = 1.2) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.2, color = NA) +
+  theme_classic() +
+  scale_color_manual(
+    name = "Block Type",
+    values = natparks.pals("Saguaro", 3),
+    labels = c(
+      "Block 1" = "Baseline",
+      "Block 2" = "Stressful",
+      "Block 3" = "Recovery"
+    )
+  ) +
+  scale_fill_manual(
+    name = "Block Type",
+    values = natparks.pals("Saguaro", 3),
+    labels = c(
+      "Block 1" = "Baseline",
+      "Block 2" = "Stressful",
+      "Block 3" = "Recovery"
+    )
+  ) +
+  scale_x_continuous(
+    name = "Fear (CBQ scores)"
+  ) +
+  theme(
+    axis.text = element_text(size = 19),
+    axis.title = element_text(size = 20),
+    legend.text = element_text(size = 19),
+    legend.title = element_text(face = "bold", size = 19),
+    legend.title.align = 0.5
+  ) +
+  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
+
+
+ggsave("figures/aim_3_F-Block_state_DLPFC.png", width = 10, height = 8)
+```
+
+#### Trait - Model -block 3 reference
+
+```{r}
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
+
+model3_4 <- lmer(
+  DLPFC_avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_trait * block +  (1 + block + trial_num | record_id),
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+
 
 
 model3_4_x <- lmer(
   DLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait * block +
-    (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait * block + 
+    (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1624,8 +2266,8 @@ model3_4_x <- lmer(
 
 model3_4_y <- lmer(
   DLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait +
-    (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait + 
+    (1 + block + trial_num | record_id) ,
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1634,16 +2276,26 @@ model3_4_y <- lmer(
 )
 
 performance::compare_performance(model3_4, model3_4_x, model3_4_y)
+performance::check_outliers(model3_4_y)
+summary(model3_4_y)
+
+# emm = emmeans(model3_4, ~ cbq_effortful_control*block )
+# pairs(emm)
+# # or for simple comparisons
+# #pairs(emm, simple = "each")
+
+anova(model3_4_y, type = "III")
+report(model3_4_y)
 ```
 
-#### Trait - Model -block 3 reference
-
+##### model  Bock 2 reference
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
 
-model3_4b <- lmer(
+model3_4_y_b <- lmer(
   DLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_trait * block + (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait + 
+    (1 + block + trial_num | record_id) ,
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1651,22 +2303,57 @@ model3_4b <- lmer(
   )
 )
 
-summary(model3_4b)
+report(model3_4_y_b)
+```
 
-# emm = emmeans(model3_4, ~ cbq_effortful_control*block )
-# pairs(emm)
-# # or for simple comparisons
-# #pairs(emm, simple = "each")
 
-anova(model3_4b, type = "III")
-report(model3_4b)
+##### Slope of EC for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_4_y, ~ block, var = "cbq_effortful_control")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+```
+##### model  Bock 1 reference
+```{r}
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 1", "Block 2", "Block 3"))
+
+model3_4_y_c <- lmer(
+  DLPFC_avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait + 
+    (1 + block + trial_num | record_id) ,
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+report(model3_4_y_c)
+```
+##### Slope of Fear for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_4_y, ~ block, var = "cbq_fear")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
 ```
 
 ##### Plot for interaction: Fear
 
 ```{r}
-interaction_eff3_4 <- ggpredict(model3_4, c("cbq_fear", "block"))
+interaction_eff3_4 <- ggpredict(model3_4_y, c("cbq_fear", "block"))
 interaction_eff3_4
+
+interaction_eff3_4$group <- factor(interaction_eff3_4$group, levels = c("Block 2", "Block 1", "Block 3"))
 
 ggplot(interaction_eff3_4, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1700,7 +2387,7 @@ ggplot(interaction_eff3_4, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_3_F-Block_trait_DLPFC.png", width = 10, height = 8)
@@ -1709,8 +2396,10 @@ ggsave("figures/aim_3_F-Block_trait_DLPFC.png", width = 10, height = 8)
 ##### Plot for interaction: EC
 
 ```{r}
-interaction_eff3_4_b <- ggpredict(model3_4, c("cbq_effortful_control", "block"))
+interaction_eff3_4_b <- ggpredict(model3_4_y, c("cbq_effortful_control", "block"))
 interaction_eff3_4_b
+
+interaction_eff3_4_b$group <- factor(interaction_eff3_4_b$group, levels = c("Block 2", "Block 1", "Block 3"))
 
 ggplot(interaction_eff3_4_b, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1744,7 +2433,7 @@ ggplot(interaction_eff3_4_b, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  scale_y_continuous(name = "DLPFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_3_EC-Block_trait_DLPFC.png", width = 10, height = 8)
@@ -1752,15 +2441,16 @@ ggsave("figures/aim_3_EC-Block_trait_DLPFC.png", width = 10, height = 8)
 
 ### VLPFC
 
-#### State - Model -block 2 reference
+#### State - Model -block 3 reference
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
+
 
 model3_5 <- lmer(
   VLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_state * block +
-    (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_state * block + 
+    (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1768,46 +2458,125 @@ model3_5 <- lmer(
   )
 )
 
-summary(model3_5)
+
+
+model3_5_x <- lmer(
+  VLPFC_avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state * block + 
+    (1 + block + trial_num | record_id) ,
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+model3_5_y <- lmer(
+  VLPFC_avg_score ~ c_age_y_centered +
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state + 
+    (1 + block + trial_num | record_id) ,
+  data = nirs_per_trial_plus_qst,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 5e5)
+  )
+)
+
+performance::compare_performance(model3_5, model3_5_x, model3_5_y)
+
+## best model is model3_5 <-
+## 
+## best model is model3_5_y <-this is after correction
+
+
+summary(model3_5_y)
 
 # emm = emmeans(model3_5, ~ cbq_effortful_control*block )
 # pairs(emm)
 # # or for simple comparisons
 # #pairs(emm, simple = "each")
 
-anova(model3_5, type = "III")
-report(model3_5)
+anova(model3_5_y, type = "III")
+report(model3_5_y)
+```
 
-model3_5_x <- lmer(
+#### Model 1 Block reference:
+```{r}
+
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 1", "Block 2", "Block 3"))
+
+model3_5_y_b <- lmer(
   VLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state * block +
-    (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state + 
+    (1 + block + trial_num | record_id) ,
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
     optCtrl = list(maxfun = 5e5)
   )
 )
-model3_5_y <- lmer(
-  VLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_state +
-    (1 + block | record_id) + (1 | trial),
-  data = nirs_per_trial_plus_qst,
-  control = lmerControl(
-    optimizer = "bobyqa",
-    optCtrl = list(maxfun = 5e5)
-  )
-)
-performance::compare_performance(model3_5, model3_5_x, model3_5_y)
 
-## best model is model3_5 <-
+report(model3_5_y_b)
+```
+
+
+##### Plot for Main Effect: STAI State
+
+```{r}
+main_eff3_5 <- ggpredict(model3_5_y, c("stai_state"))
+main_eff3_5
+
+ggplot(main_eff3_5, aes(x, predicted)) +
+  geom_line(linewidth = 1.2) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, color = NA) +
+  theme_classic() +
+  scale_x_continuous(
+    name = "Parent State Anxiety"
+  ) +
+  theme(
+    axis.text = element_text(size = 19),
+    axis.title = element_text(size = 20),
+    legend.text = element_text(size = 19),
+    legend.title = element_text(face = "bold", size = 19),
+    legend.title.align = 0.5
+  ) +
+  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
+
+
+ggsave("figures/aim_3_state_VLPFC.png", width = 10, height = 8)
+```
+
+##### Slope of EC for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_5_y, ~ block, var = "cbq_effortful_control")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+```
+
+##### Slope of F for each block
+
+```{r}
+# Slope of F for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_5_y, ~ block, var = "cbq_fear")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
 ```
 
 ##### Plot for Interaction: Fear
 
 ```{r}
-interaction_eff3_5 <- ggpredict(model3_5, c("cbq_fear", "block"))
+interaction_eff3_5 <- ggpredict(model3_5_y, c("cbq_fear", "block"))
 interaction_eff3_5
+
+interaction_eff3_5$group <- factor(interaction_eff3_5$group, levels = c("Block 2", "Block 1", "Block 3"))
 
 ggplot(interaction_eff3_5, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1841,7 +2610,7 @@ ggplot(interaction_eff3_5, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_3_F-Block_state_VLPFC.png", width = 10, height = 8)
@@ -1850,8 +2619,11 @@ ggsave("figures/aim_3_F-Block_state_VLPFC.png", width = 10, height = 8)
 ##### Plot for Interaction: EC
 
 ```{r}
-interaction_eff3_5_b <- ggpredict(model3_5, c("cbq_effortful_control", "block"))
+interaction_eff3_5_b <- ggpredict(model3_5_y, c("cbq_effortful_control", "block"))
 interaction_eff3_5_b
+
+interaction_eff3_5_b$group <- factor(interaction_eff3_5_b$group, levels = c("Block 2", "Block 1", "Block 3"))
+
 
 ggplot(interaction_eff3_5_b, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1885,21 +2657,21 @@ ggplot(interaction_eff3_5_b, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02))  # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_3_EC-Block_state_VLPFC.png", width = 10, height = 8)
 ```
 
-#### Trait - Model -block 2 reference
+#### Trait - Model -block 3 reference
 
 ```{r}
-nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 2", "Block 1", "Block 3"))
+nirs_per_trial_plus_qst$block <- factor(nirs_per_trial_plus_qst$block, levels = c("Block 3", "Block 1", "Block 2"))
 
 model3_6 <- lmer(
   VLPFC_avg_score ~ c_age_y_centered +
     c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c * block + stai_trait * block +
-    (1 + block | record_id) + (1 | trial),
+    (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1907,23 +2679,14 @@ model3_6 <- lmer(
   )
 )
 
-summary(model3_6)
-
-# emm = emmeans(model3_6, ~ cbq_effortful_control*block )
-# pairs(emm)
-# # or for simple comparisons
-# #pairs(emm, simple = "each")
-
-anova(model3_6, type = "III")
-report(model3_6)
 
 performance::check_outliers(model3_6)
 
 
 model3_6_x <- lmer(
   VLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait * block +
-    (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait * block + 
+    (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1933,8 +2696,8 @@ model3_6_x <- lmer(
 
 model3_6_y <- lmer(
   VLPFC_avg_score ~ c_age_y_centered +
-    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait +
-    (1 + block | record_id) + (1 | trial),
+    c_sex + cbq_fear * block + cbq_effortful_control * block + anxiety_c + stai_trait  +
+    (1 + block + trial_num | record_id),
   data = nirs_per_trial_plus_qst,
   control = lmerControl(
     optimizer = "bobyqa",
@@ -1945,13 +2708,50 @@ model3_6_y <- lmer(
 performance::compare_performance(model3_6, model3_6_x, model3_6_y)
 
 ## the best model is model3_6 <-
+## the best model is model3_6_y <- after correction
+## 
+summary(model3_6_y)
+
+# emm = emmeans(model3_6, ~ cbq_effortful_control*block )
+# pairs(emm)
+# # or for simple comparisons
+# #pairs(emm, simple = "each")
+
+report(model3_6_y)
+
+```
+
+##### Slope of EC for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_6_y, ~ block, var = "cbq_effortful_control")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
+```
+
+##### Slope of F for each block
+
+```{r}
+# Slope of EC for each block
+emm_options(lmer.df = "satterthwaite")
+slopes <- emtrends(model3_6_y, ~ block, var = "cbq_fear")
+summary(slopes, infer = c(TRUE, TRUE))
+
+# Pairwise tests: are the EC slopes different between blocks?
+pairs(slopes, adjust = "none")  # or "fdr"
 ```
 
 ##### Plot for Interaction: Fear
 
 ```{r}
-interaction_eff3_6 <- ggpredict(model3_6, c("cbq_fear", "block"))
+interaction_eff3_6 <- ggpredict(model3_6_y, c("cbq_fear", "block"))
 interaction_eff3_6
+
+interaction_eff3_6$group <- factor(interaction_eff3_6$group, levels = c("Block 2", "Block 1", "Block 3"))
 
 ggplot(interaction_eff3_6, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -1985,7 +2785,7 @@ ggplot(interaction_eff3_6, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_3_F-Block_trait_VLPFC.png", width = 10, height = 8)
@@ -1994,8 +2794,10 @@ ggsave("figures/aim_3_F-Block_trait_VLPFC.png", width = 10, height = 8)
 ##### Plot for Interaction: EC
 
 ```{r}
-interaction_eff3_6_b <- ggpredict(model3_6, c("cbq_effortful_control", "block"))
+interaction_eff3_6_b <- ggpredict(model3_6_y, c("cbq_effortful_control", "block"))
 interaction_eff3_6_b
+
+interaction_eff3_6_b$group <- factor(interaction_eff3_6_b$group, levels = c("Block 2", "Block 1", "Block 3"))
 
 ggplot(interaction_eff3_6_b, aes(x, predicted, color = group)) +
   geom_line(linewidth = 1.2) +
@@ -2029,7 +2831,7 @@ ggplot(interaction_eff3_6_b, aes(x, predicted, color = group)) +
     legend.title = element_text(face = "bold", size = 19),
     legend.title.align = 0.5
   ) +
-  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.29, .42), breaks = seq(0.29, .42, by = 0.02)) # Setting Y-axis limits and ticks
+  scale_y_continuous(name = "VLPFC Neural Synchrony (predicted)", limits = c(0.2, .32), breaks = seq(0.2, .32, by = 0.02)) # Setting Y-axis limits and ticks
 
 
 ggsave("figures/aim_3_EC-Block_trait_VLPFC.png", width = 10, height = 8)
@@ -2095,16 +2897,17 @@ ggsave("figures/aim_3_corr_child_parent_trait_anx.png", width = 12, height = 8)
 ### Report-State
 
 ```{r}
-tab_model(model3_1, model3_3, model3_5, p.val = "kr", show.df = TRUE, collapse.ci = TRUE, p.style = "stars", digits = 3)
+tab_model(model3_1_y, model3_3_y, model3_5_y, p.val = "kr", show.df = TRUE, collapse.ci = TRUE, p.style = "stars", digits = 4)
 ```
 
 ### Report-Trait
 
 ```{r}
-tab_model(model3_2, model3_4, model3_6, p.val = "kr", show.df = TRUE, collapse.ci = TRUE, p.style = "stars", digits = 3)
+tab_model(model3_2_y, model3_4_y, model3_6_y, p.val = "kr", show.df = TRUE, collapse.ci = TRUE, p.style = "stars", digits = 4)
 ```
 
-## 4. Correlations with all 
+## 4. Correlations with all
+
 ```{r}
 report(cor.test(block1$stai_state, block1$cbq_fear, method = "pearson", conf.level = 0.95))
 report(cor.test(block1$stai_trait, block1$cbq_fear, method = "pearson", conf.level = 0.95))

@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output:
   html_document:
     df_print: paged
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -23,6 +24,8 @@ mutate <- dplyr::mutate
 select <- dplyr::select
 summarise <- dplyr::summarise
 summarize <- dplyr::summarize
+
+`%notin%` <- negate(`%in%`)
 ```
 
 
@@ -30,27 +33,37 @@ summarize <- dplyr::summarize
 ```{r datasets}
 # upload the datasets
 #### Synchrony data
-synch_data <- read_csv("data/neuro/wct_permuted_values_5_105.csv") %>%
+synch_data <- read_csv("data/neuro/wct_all-dyads_r56_byband.csv") %>%
   janitor::clean_names() %>%
   # select(-x1) %>%
   mutate(
     record_id = substr(as.character(parent), 1, 4),
     record_id = as.numeric(record_id)
   ) %>%
-  relocate(record_id, .before = parent) %>%
-  mutate(across(everything(), ~ ifelse(is.nan(.), NA, .)))
+  relocate(record_id, .before = parent) 
+
+# #### Synchrony data
+# synch_data_real_dyads <- read_csv("data/neuro/wct_real-dyads_r56_byband.csv") %>%
+#   janitor::clean_names() %>%
+#   # select(-x1) %>%
+#   mutate(
+#     record_id = substr(as.character(parent), 1, 4),
+#     record_id = as.numeric(record_id)
+#   ) %>%
+#   relocate(record_id, .before = parent) 
+
 
 ## CBQ
 
-cbq_data_main_domains <- read_csv("data/qst/cbq_scores_big_three.csv") %>%
+cbq_data_main_domains <- read_csv("questionnaires/output/2023-11-16/cbq_scores_big_three.csv") %>%
   janitor::clean_names()
 
-cbq_data_main_subscales <- read_csv("data/qst/cbq_scores_subscales.csv") %>%
+cbq_data_main_subscales <- read_csv("questionnaires/output/2023-11-16/cbq_scores_subscales.csv") %>%
   janitor::clean_names()
 
 ## HBQ
 
-hbq_data_overall <- read_csv("data/qst/hbq_scores_overall.csv") %>%
+hbq_data_overall <- read_csv("questionnaires/output/2023-11-16/hbq_scores_overall.csv") %>%
   janitor::clean_names() %>%
   rowwise() %>%
   mutate(anxiety_c = mean(c_across(c("hbq_internalizing_symptoms_overanxious", "hbq_internalizing_symptoms_separation_anxiety", "hbq_social_withdrawal_social_inhibition")), na.rm = TRUE)) %>%
@@ -58,7 +71,7 @@ hbq_data_overall <- read_csv("data/qst/hbq_scores_overall.csv") %>%
 
 
 ### STAI
-stai_data <- read_csv("data/qst/stai_scores.csv") %>%
+stai_data <- read_csv("questionnaires/output/2023-11-16/stai_scores.csv") %>%
   janitor::clean_names()
 
 ### Demo (age)
@@ -81,67 +94,120 @@ questionnaires_data <- cbq_data_main_domains %>%
 ### Creating variable to identify which ones are real dyads and which ones aren't
 synchrony_data_per_trial <- synch_data %>%
   mutate(
-    category = ifelse(
-      substr(as.character(parent), 1, 4) == substr(as.character(child), 1, 4),
-      1,
-      0
+    # fully vectorized; no rowwise needed
+    category = factor(substr(parent, 1, 4) == substr(child, 1, 4),
+                      levels = c(FALSE, TRUE), labels = c("0","1")),
+    baseline = 0,
+
+    avg_score = rowMeans(pick(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
+
+    DLPFC_avg_score = rowMeans(
+      pick(s3_d2_hbo, s4_d2_hbo, s5_d3_hbo, s6_d3_hbo), na.rm = TRUE
     ),
-    category = as.factor(category),
-    baseline = 0
-  ) %>%
-  rowwise() %>%
-  mutate(
-    avg_score = mean(c_across(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
-    DLPFC_avg_score = mean(c_across(c("s3_d2_hbo", "s4_d2_hbo", "s5_d3_hbo", "s6_d3_hbo")), na.rm = TRUE),
-    VLPFC_avg_score = mean(c_across(c("s1_d1_hbo", "s2_d1_hbo", "s2_d2_hbo", "s7_d3_hbo", "s7_d4_hbo", "s8_d4_hbo")), na.rm = TRUE),
-  ) %>%
-  ungroup()
+
+    VLPFC_avg_score = rowMeans(
+      pick(s1_d1_hbo, s2_d1_hbo, s2_d2_hbo, s7_d3_hbo, s7_d4_hbo, s8_d4_hbo),
+      na.rm = TRUE
+    )
+  )
 
 synchrony_data_per_trial$category <- recode_factor(synchrony_data_per_trial$category, `1` = "Real Dyads", `0` = "Pseudo Dyads")
 
+write_csv(synchrony_data_per_trial,"data/tidy/tidy_df_pseudo_and_real_per_trial.csv")
 # write files in .Rdata format so the factors and other column types remain with the values I assigned
 save(synchrony_data_per_trial, file = "data/tidy/tidy_df_pseudo_and_real_per_trial.RData")
 
 synchrony_data <- synch_data %>%
-  select(record_id:s8_d4_hbo) %>%
-  pivot_longer(
-    cols = starts_with("s"),
-    names_to = "channel",
-    values_to = "value"
+  # keep only what you need; be sure channel cols are numeric
+  transmute(
+    record_id, parent, child, block, band,
+    across(s1_d1_hbo:s8_d4_hbo, as.numeric)
   ) %>%
-  group_by(record_id, parent, child, block, channel) %>%
-  summarise(average = mean(value, na.rm = TRUE)) %>%
-  pivot_wider(names_from = channel, values_from = average) %>%
+  # per-(record_id, parent, child, block, band) means for each channel
+  summarise(
+    across(s1_d1_hbo:s8_d4_hbo, ~ mean(.x, na.rm = TRUE)),
+    .by = c(record_id, parent, child, block, band)
+  ) %>%
   mutate(
-    category = ifelse(
-      substr(as.character(parent), 1, 4) == substr(as.character(child), 1, 4),
-      1,
-      0
-    ),
-    category = as.factor(category),
-    baseline = 0
-  ) %>%
-  rowwise() %>%
-  mutate(
-    avg_score = mean(c_across(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
-    DLPFC_avg_score = mean(c_across(c("s3_d2_hbo", "s4_d2_hbo", "s5_d3_hbo", "s6_d3_hbo")), na.rm = TRUE),
-    VLPFC_avg_score = mean(c_across(c("s1_d1_hbo", "s2_d1_hbo", "s2_d2_hbo", "s7_d3_hbo", "s7_d4_hbo", "s8_d4_hbo")), na.rm = TRUE),
-  ) %>%
-  ungroup()
+    category = factor(substr(parent, 1, 4) == substr(child, 1, 4),
+                      levels = c(FALSE, TRUE), labels = c("0","1")),
+    baseline = 0,
+    avg_score = rowMeans(pick(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
+    DLPFC_avg_score = rowMeans(pick(s3_d2_hbo, s4_d2_hbo, s5_d3_hbo, s6_d3_hbo), na.rm = TRUE),
+    VLPFC_avg_score = rowMeans(pick(s1_d1_hbo, s2_d1_hbo, s2_d2_hbo, s7_d3_hbo, s7_d4_hbo, s8_d4_hbo), na.rm = TRUE)
+  )
 
 synchrony_data$category <- recode_factor(synchrony_data$category, `1` = "Real Dyads", `0` = "Pseudo Dyads")
 
+write_csv(synchrony_data,"data/tidy/tidy_df_pseudo_and_real.csv")
 # write files in .Rdata format so the factors and other column types remain with the values I assigned
 save(synchrony_data, file = "data/tidy/tidy_df_pseudo_and_real.RData")
 ```
+## Temporary until I get pseudo particiants
+## Finding the real dyads and Pseudo dyads
 
+```{r}
+# ### Creating variable to identify which ones are real dyads and which ones aren't
+# synchrony_data_per_trial_real_dyads <- synch_data_real_dyads %>%
+#   mutate(
+#     # fully vectorized; no rowwise needed
+#     category = factor(substr(parent, 1, 4) == substr(child, 1, 4),
+#                       levels = c(FALSE, TRUE), labels = c("0","1")),
+#     baseline = 0,
+# 
+#     avg_score = rowMeans(pick(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
+# 
+#     DLPFC_avg_score = rowMeans(
+#       pick(s3_d2_hbo, s4_d2_hbo, s5_d3_hbo, s6_d3_hbo), na.rm = TRUE
+#     ),
+# 
+#     VLPFC_avg_score = rowMeans(
+#       pick(s1_d1_hbo, s2_d1_hbo, s2_d2_hbo, s7_d3_hbo, s7_d4_hbo, s8_d4_hbo),
+#       na.rm = TRUE
+#     )
+#   )
+# 
+# synchrony_data_per_trial_real_dyads$category <- recode_factor(synchrony_data_per_trial_real_dyads$category, `1` = "Real Dyads", `0` = "Pseudo Dyads")
+# 
+# write_csv(synchrony_data_per_trial_real_dyads,"data/tidy/tidy_df_real_per_trial.csv")
+# # write files in .Rdata format so the factors and other column types remain with the values I assigned
+# save(synchrony_data_per_trial_real_dyads, file = "data/tidy/tidy_df_real_per_trial.RData")
+# 
+# synchrony_data_real_dyads <- synch_data_real_dyads %>%
+#   # keep only what you need; be sure channel cols are numeric
+#   transmute(
+#     record_id, parent, child, block, band,
+#     across(s1_d1_hbo:s8_d4_hbo, as.numeric)
+#   ) %>%
+#   # per-(record_id, parent, child, block, band) means for each channel
+#   summarise(
+#     across(s1_d1_hbo:s8_d4_hbo, ~ mean(.x, na.rm = TRUE)),
+#     .by = c(record_id, parent, child, block, band)
+#   ) %>%
+#   mutate(
+#     category = factor(substr(parent, 1, 4) == substr(child, 1, 4),
+#                       levels = c(FALSE, TRUE), labels = c("0","1")),
+#     baseline = 0,
+#     avg_score = rowMeans(pick(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
+#     DLPFC_avg_score = rowMeans(pick(s3_d2_hbo, s4_d2_hbo, s5_d3_hbo, s6_d3_hbo), na.rm = TRUE),
+#     VLPFC_avg_score = rowMeans(pick(s1_d1_hbo, s2_d1_hbo, s2_d2_hbo, s7_d3_hbo, s7_d4_hbo, s8_d4_hbo), na.rm = TRUE)
+#   )
+# 
+# synchrony_data_real_dyads$category <- recode_factor(synchrony_data_real_dyads$category, `1` = "Real Dyads", `0` = "Pseudo Dyads")
+# 
+# write_csv(synchrony_data_real_dyads,"data/tidy/tidy_df_real.csv")
+# # write files in .Rdata format so the factors and other column types remain with the values I assigned
+# save(synchrony_data_real_dyads, file = "data/tidy/tidy_df_real.RData")
+```
 
 ## Adding Questionnaires
 ```{r}
-
 nirs_records <- synchrony_data %>%
-  select(record_id) %>%
+  dplyr::filter(band == "old") %>%
+  dplyr::select(record_id) %>%
   unique()
+
+nirs_records_list <- nirs_records %>% pull()
 
 nirs_records_plus_demo <- nirs_records %>%
   left_join(primary_parent_sample_long)
@@ -151,39 +217,63 @@ nirs_records_plus_qst_df <- nirs_records %>%
 
 write_csv(nirs_records_plus_qst_df, "data/tidy/pre_imputation_df.csv")
 ```
+
+## Adding Questionnaires (Temporary)
+```{r}
+# nirs_records_real_dyads <- synchrony_data_real_dyads %>%
+#   dplyr::filter(band == "old") %>%
+#   dplyr::select(record_id) %>%
+#   unique()
+# 
+# nirs_records_list_real_dyads <- nirs_records_real_dyads %>% pull()
+# 
+# nirs_records_plus_demo <- nirs_records_real_dyads %>%
+#   left_join(primary_parent_sample_long)
+# 
+# nirs_records_plus_qst_df <- nirs_records_real_dyads %>%
+#   left_join(questionnaires_data)
+# 
+# write_csv(nirs_records_plus_qst_df, "data/tidy/pre_imputation_df.csv")
+```
+
+
 ## Impute data
 
 ```{r inpute-data, warning=FALSE}
-# set number of imputations
-n_imputations <- 25
-
-# impute missing data
-imp <- mice(nirs_records_plus_qst_df, m = n_imputations, seed = 3, print = FALSE)
-
-# initialize empty list
-imputed_data_list <- list()
-
-# loop to store each imputed dataset
-for (i in 1:n_imputations) {
-  # store imputation iteration in list
-  imputed_data_list[[i]] <- complete(imp, action = i)
-}
+# # set number of imputations
+# n_imputations <- 25
+# 
+# # impute missing data
+# imp <- mice(nirs_records_plus_qst_df, m = n_imputations, seed = 3, print = FALSE)
+# 
+# # initialize empty list
+# imputed_data_list <- list()
+# 
+# # loop to store each imputed dataset
+# for (i in 1:n_imputations) {
+#   # store imputation iteration in list
+#   imputed_data_list[[i]] <- complete(imp, action = i)
+# }
 ```
 
 ### Combine imputed datasets
 
 ```{r}
-# bind imputed data frames
-combined_data <- do.call(rbind, imputed_data_list)
-# collapse continuous variables, join with categorical variables
+# # bind imputed data frames
+# combined_data <- do.call(rbind, imputed_data_list)
+# # collapse continuous variables, join with categorical variables
+# 
+# dat_long_imp <- combined_data %>%
+#   group_by(record_id) %>%
+#   summarise_all(mean, na.rm = TRUE) %>%
+#   ungroup()
+# 
+# write_csv(dat_long_imp, "data/tidy/post_imputation_df.csv")
 
-dat_long_imp <- combined_data %>%
-  group_by(record_id) %>%
-  summarise_all(mean, na.rm = TRUE) %>%
-  ungroup()
+```
 
-write_csv(dat_long_imp, "data/tidy/post_imputation_df.csv")
-
+```{r}
+dat_long_imp <- read_csv("data/tidy/post_imputation_df.csv")
 ```
 
 ## Merge all DFs
@@ -202,6 +292,7 @@ nirs_per_trial_plus_qst <- synchrony_data_per_trial %>%
 avg_1 <- nirs_plus_qst %>%
   distinct(record_id, .keep_all = TRUE) %>%
   select(c_age_y) %>%
+  ungroup() |> 
   summarise(c_age_avg = mean(c_age_y, na.rm = TRUE)) %>%
   pull()
 
@@ -221,9 +312,9 @@ save(nirs_per_trial_plus_qst, file = "data/tidy/tidy_df.RData")
 ### STAI
 ```{r}
 # upload the datasets
-raw_data <- read_csv("data/qst/PCATR56_DATA_2024-03-05_1048.csv") %>%
+raw_data <- read_csv("questionnaires/input/PCATR56_DATA_2024-03-05_1048.csv") %>%
   janitor::clean_names()
-stai_items <- read_csv("data/qst/stai_items.csv") %>%
+stai_items <- read_csv("questionnaires/input/stai_items.csv") %>%
   janitor::clean_names()
 
 a <- raw_data %>%
@@ -271,7 +362,7 @@ rm("a", "b", "stai_data", "stai_items")
 
 ### Child Anxiety
 ```{r}
-hbq_items <- read_csv("data/qst/hbq_items.csv") %>%
+hbq_items <- read_csv("questionnaires/input/hbq_items.csv") %>%
   janitor::clean_names()
 
 c <- hbq_data_overall %>%
@@ -308,10 +399,9 @@ cronbach.alpha(c, CI=TRUE, standardized=FALSE)
 # remove dfs I won't need again
 rm("c", "hbq_data_overall")
 ```
-
 ### CBQ Fear and Effortful Control
 ```{r}
-cbq_items <- read_csv("data/qst/cbq_items.csv") %>%
+cbq_items <- read_csv("questionnaires/input/cbq_items.csv") %>%
   janitor::clean_names()
 
 d <- raw_data %>%

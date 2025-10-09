@@ -11,7 +11,7 @@
 
 <meta name="author" content="Joscelin Rocha-Hidalgo" />
 
-<meta name="date" content="2025-02-10" />
+<meta name="date" content="2025-10-02" />
 
 <title>Cleaning DF</title>
 
@@ -1623,7 +1623,7 @@ display: none;
 
 <h1 class="title toc-ignore">Cleaning DF</h1>
 <h4 class="author">Joscelin Rocha-Hidalgo</h4>
-<h4 class="date">2025-02-10</h4>
+<h4 class="date">2025-10-02</h4>
 
 </div>
 
@@ -1635,7 +1635,7 @@ display: none;
 <h2>Import the datasets</h2>
 <pre class="r"><code># upload the datasets
 #### Synchrony data
-synch_data &lt;- read_csv(&quot;data/neuro/wct_permuted_values_5_105.csv&quot;) %&gt;%
+synch_data &lt;- read_csv(&quot;data/neuro/wct_all-dyads_r56_byband.csv&quot;) %&gt;%
   janitor::clean_names() %&gt;%
   # select(-x1) %&gt;%
   mutate(
@@ -1644,17 +1644,17 @@ synch_data &lt;- read_csv(&quot;data/neuro/wct_permuted_values_5_105.csv&quot;) 
   ) %&gt;%
   relocate(record_id, .before = parent) %&gt;%
   mutate(across(everything(), ~ ifelse(is.nan(.), NA, .)))</code></pre>
-<pre><code>## Rows: 141489 Columns: 14
+<pre><code>## Rows: 847944 Columns: 16
 ## ── Column specification ────────────────────────────────────────────────────────
 ## Delimiter: &quot;,&quot;
-## chr  (4): Parent, Child, Block, Trial
+## chr  (6): Parent, Child, Ts, Block, Trial, Band
 ## dbl (10): S1_D1 hbo, S2_D1 hbo, S2_D2 hbo, S3_D2 hbo, S4_D2 hbo, S5_D3 hbo, ...
 ## 
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
 <pre class="r"><code>## CBQ
 
-cbq_data_main_domains &lt;- read_csv(&quot;data/qst/cbq_scores_big_three.csv&quot;) %&gt;%
+cbq_data_main_domains &lt;- read_csv(&quot;questionnaires/output/2023-11-16/cbq_scores_big_three.csv&quot;) %&gt;%
   janitor::clean_names()</code></pre>
 <pre><code>## Rows: 159 Columns: 4
 ## ── Column specification ────────────────────────────────────────────────────────
@@ -1663,7 +1663,7 @@ cbq_data_main_domains &lt;- read_csv(&quot;data/qst/cbq_scores_big_three.csv&quo
 ## 
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
-<pre class="r"><code>cbq_data_main_subscales &lt;- read_csv(&quot;data/qst/cbq_scores_subscales.csv&quot;) %&gt;%
+<pre class="r"><code>cbq_data_main_subscales &lt;- read_csv(&quot;questionnaires/output/2023-11-16/cbq_scores_subscales.csv&quot;) %&gt;%
   janitor::clean_names()</code></pre>
 <pre><code>## Rows: 159 Columns: 16
 ## ── Column specification ────────────────────────────────────────────────────────
@@ -1674,7 +1674,7 @@ cbq_data_main_domains &lt;- read_csv(&quot;data/qst/cbq_scores_big_three.csv&quo
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
 <pre class="r"><code>## HBQ
 
-hbq_data_overall &lt;- read_csv(&quot;data/qst/hbq_scores_overall.csv&quot;) %&gt;%
+hbq_data_overall &lt;- read_csv(&quot;questionnaires/output/2023-11-16/hbq_scores_overall.csv&quot;) %&gt;%
   janitor::clean_names() %&gt;%
   rowwise() %&gt;%
   mutate(anxiety_c = mean(c_across(c(&quot;hbq_internalizing_symptoms_overanxious&quot;, &quot;hbq_internalizing_symptoms_separation_anxiety&quot;, &quot;hbq_social_withdrawal_social_inhibition&quot;)), na.rm = TRUE)) %&gt;%
@@ -1687,7 +1687,7 @@ hbq_data_overall &lt;- read_csv(&quot;data/qst/hbq_scores_overall.csv&quot;) %&g
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
 <pre class="r"><code>### STAI
-stai_data &lt;- read_csv(&quot;data/qst/stai_scores.csv&quot;) %&gt;%
+stai_data &lt;- read_csv(&quot;questionnaires/output/2023-11-16/stai_scores.csv&quot;) %&gt;%
   janitor::clean_names()</code></pre>
 <pre><code>## Rows: 159 Columns: 3
 ## ── Column specification ────────────────────────────────────────────────────────
@@ -1718,65 +1718,63 @@ questionnaires_data &lt;- cbq_data_main_domains %&gt;%
 <pre class="r"><code>### Creating variable to identify which ones are real dyads and which ones aren&#39;t
 synchrony_data_per_trial &lt;- synch_data %&gt;%
   mutate(
-    category = ifelse(
-      substr(as.character(parent), 1, 4) == substr(as.character(child), 1, 4),
-      1,
-      0
+    # fully vectorized; no rowwise needed
+    category = factor(substr(parent, 1, 4) == substr(child, 1, 4),
+                      levels = c(FALSE, TRUE), labels = c(&quot;0&quot;,&quot;1&quot;)),
+    baseline = 0,
+
+    avg_score = rowMeans(pick(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
+
+    DLPFC_avg_score = rowMeans(
+      pick(s3_d2_hbo, s4_d2_hbo, s5_d3_hbo, s6_d3_hbo), na.rm = TRUE
     ),
-    category = as.factor(category),
-    baseline = 0
-  ) %&gt;%
-  rowwise() %&gt;%
-  mutate(
-    avg_score = mean(c_across(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
-    DLPFC_avg_score = mean(c_across(c(&quot;s3_d2_hbo&quot;, &quot;s4_d2_hbo&quot;, &quot;s5_d3_hbo&quot;, &quot;s6_d3_hbo&quot;)), na.rm = TRUE),
-    VLPFC_avg_score = mean(c_across(c(&quot;s1_d1_hbo&quot;, &quot;s2_d1_hbo&quot;, &quot;s2_d2_hbo&quot;, &quot;s7_d3_hbo&quot;, &quot;s7_d4_hbo&quot;, &quot;s8_d4_hbo&quot;)), na.rm = TRUE),
-  ) %&gt;%
-  ungroup()
+
+    VLPFC_avg_score = rowMeans(
+      pick(s1_d1_hbo, s2_d1_hbo, s2_d2_hbo, s7_d3_hbo, s7_d4_hbo, s8_d4_hbo),
+      na.rm = TRUE
+    )
+  )
 
 synchrony_data_per_trial$category &lt;- recode_factor(synchrony_data_per_trial$category, `1` = &quot;Real Dyads&quot;, `0` = &quot;Pseudo Dyads&quot;)
 
+write_csv(synchrony_data_per_trial,&quot;data/tidy/tidy_df_pseudo_and_real_per_trial.csv&quot;)
 # write files in .Rdata format so the factors and other column types remain with the values I assigned
 save(synchrony_data_per_trial, file = &quot;data/tidy/tidy_df_pseudo_and_real_per_trial.RData&quot;)
 
 synchrony_data &lt;- synch_data %&gt;%
-  select(record_id:s8_d4_hbo) %&gt;%
-  pivot_longer(
-    cols = starts_with(&quot;s&quot;),
-    names_to = &quot;channel&quot;,
-    values_to = &quot;value&quot;
+  # keep only what you need; be sure channel cols are numeric
+  transmute(
+    record_id, parent, child, block, band,
+    across(s1_d1_hbo:s8_d4_hbo, as.numeric)
   ) %&gt;%
-  group_by(record_id, parent, child, block, channel) %&gt;%
-  summarise(average = mean(value, na.rm = TRUE)) %&gt;%
-  pivot_wider(names_from = channel, values_from = average) %&gt;%
+  # per-(record_id, parent, child, block, band) means for each channel
+  summarise(
+    across(s1_d1_hbo:s8_d4_hbo, ~ mean(.x, na.rm = TRUE)),
+    .by = c(record_id, parent, child, block, band)
+  ) %&gt;%
   mutate(
-    category = ifelse(
-      substr(as.character(parent), 1, 4) == substr(as.character(child), 1, 4),
-      1,
-      0
-    ),
-    category = as.factor(category),
-    baseline = 0
-  ) %&gt;%
-  rowwise() %&gt;%
-  mutate(
-    avg_score = mean(c_across(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
-    DLPFC_avg_score = mean(c_across(c(&quot;s3_d2_hbo&quot;, &quot;s4_d2_hbo&quot;, &quot;s5_d3_hbo&quot;, &quot;s6_d3_hbo&quot;)), na.rm = TRUE),
-    VLPFC_avg_score = mean(c_across(c(&quot;s1_d1_hbo&quot;, &quot;s2_d1_hbo&quot;, &quot;s2_d2_hbo&quot;, &quot;s7_d3_hbo&quot;, &quot;s7_d4_hbo&quot;, &quot;s8_d4_hbo&quot;)), na.rm = TRUE),
-  ) %&gt;%
-  ungroup()</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;record_id&#39;, &#39;parent&#39;, &#39;child&#39;, &#39;block&#39;.
-## You can override using the `.groups` argument.</code></pre>
-<pre class="r"><code>synchrony_data$category &lt;- recode_factor(synchrony_data$category, `1` = &quot;Real Dyads&quot;, `0` = &quot;Pseudo Dyads&quot;)
+    category = factor(substr(parent, 1, 4) == substr(child, 1, 4),
+                      levels = c(FALSE, TRUE), labels = c(&quot;0&quot;,&quot;1&quot;)),
+    baseline = 0,
+    avg_score = rowMeans(pick(s1_d1_hbo:s8_d4_hbo), na.rm = TRUE),
+    DLPFC_avg_score = rowMeans(pick(s3_d2_hbo, s4_d2_hbo, s5_d3_hbo, s6_d3_hbo), na.rm = TRUE),
+    VLPFC_avg_score = rowMeans(pick(s1_d1_hbo, s2_d1_hbo, s2_d2_hbo, s7_d3_hbo, s7_d4_hbo, s8_d4_hbo), na.rm = TRUE)
+  )
 
+synchrony_data$category &lt;- recode_factor(synchrony_data$category, `1` = &quot;Real Dyads&quot;, `0` = &quot;Pseudo Dyads&quot;)
+
+write_csv(synchrony_data,&quot;data/tidy/tidy_df_pseudo_and_real.csv&quot;)
 # write files in .Rdata format so the factors and other column types remain with the values I assigned
 save(synchrony_data, file = &quot;data/tidy/tidy_df_pseudo_and_real.RData&quot;)</code></pre>
 </div>
 <div id="adding-questionnaires" class="section level2">
 <h2>Adding Questionnaires</h2>
 <pre class="r"><code>nirs_records &lt;- synchrony_data %&gt;%
-  select(record_id) %&gt;%
+  dplyr::filter(band == &quot;old&quot;) %&gt;%
+  dplyr::select(record_id) %&gt;%
   unique()
+
+nirs_records_list &lt;- nirs_records %&gt;% pull()
 
 nirs_records_plus_demo &lt;- nirs_records %&gt;%
   left_join(primary_parent_sample_long)</code></pre>
@@ -1788,32 +1786,40 @@ nirs_records_plus_demo &lt;- nirs_records %&gt;%
 </div>
 <div id="impute-data" class="section level2">
 <h2>Impute data</h2>
-<pre class="r"><code># set number of imputations
-n_imputations &lt;- 25
-
-# impute missing data
-imp &lt;- mice(nirs_records_plus_qst_df, m = n_imputations, seed = 3, print = FALSE)
-
-# initialize empty list
-imputed_data_list &lt;- list()
-
-# loop to store each imputed dataset
-for (i in 1:n_imputations) {
-  # store imputation iteration in list
-  imputed_data_list[[i]] &lt;- complete(imp, action = i)
-}</code></pre>
+<pre class="r"><code># # set number of imputations
+# n_imputations &lt;- 25
+# 
+# # impute missing data
+# imp &lt;- mice(nirs_records_plus_qst_df, m = n_imputations, seed = 3, print = FALSE)
+# 
+# # initialize empty list
+# imputed_data_list &lt;- list()
+# 
+# # loop to store each imputed dataset
+# for (i in 1:n_imputations) {
+#   # store imputation iteration in list
+#   imputed_data_list[[i]] &lt;- complete(imp, action = i)
+# }</code></pre>
 <div id="combine-imputed-datasets" class="section level3">
 <h3>Combine imputed datasets</h3>
-<pre class="r"><code># bind imputed data frames
-combined_data &lt;- do.call(rbind, imputed_data_list)
-# collapse continuous variables, join with categorical variables
-
-dat_long_imp &lt;- combined_data %&gt;%
-  group_by(record_id) %&gt;%
-  summarise_all(mean, na.rm = TRUE) %&gt;%
-  ungroup()
-
-write_csv(dat_long_imp, &quot;data/tidy/post_imputation_df.csv&quot;)</code></pre>
+<pre class="r"><code># # bind imputed data frames
+# combined_data &lt;- do.call(rbind, imputed_data_list)
+# # collapse continuous variables, join with categorical variables
+# 
+# dat_long_imp &lt;- combined_data %&gt;%
+#   group_by(record_id) %&gt;%
+#   summarise_all(mean, na.rm = TRUE) %&gt;%
+#   ungroup()
+# 
+# write_csv(dat_long_imp, &quot;data/tidy/post_imputation_df.csv&quot;)</code></pre>
+<pre class="r"><code>dat_long_imp &lt;- read_csv(&quot;data/tidy/post_imputation_df.csv&quot;)</code></pre>
+<pre><code>## Rows: 109 Columns: 6
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## dbl (6): record_id, stai_trait, stai_state, cbq_effortful_control, cbq_fear,...
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
 </div>
 </div>
 <div id="merge-all-dfs" class="section level2">
@@ -1833,6 +1839,7 @@ write_csv(dat_long_imp, &quot;data/tidy/post_imputation_df.csv&quot;)</code></pr
 <pre class="r"><code>avg_1 &lt;- nirs_plus_qst %&gt;%
   distinct(record_id, .keep_all = TRUE) %&gt;%
   select(c_age_y) %&gt;%
+  ungroup() |&gt; 
   summarise(c_age_avg = mean(c_age_y, na.rm = TRUE)) %&gt;%
   pull()
 
@@ -1851,7 +1858,7 @@ save(nirs_per_trial_plus_qst, file = &quot;data/tidy/tidy_df.RData&quot;)</code>
 <div id="stai" class="section level3">
 <h3>STAI</h3>
 <pre class="r"><code># upload the datasets
-raw_data &lt;- read_csv(&quot;data/qst/PCATR56_DATA_2024-03-05_1048.csv&quot;) %&gt;%
+raw_data &lt;- read_csv(&quot;questionnaires/input/PCATR56_DATA_2024-03-05_1048.csv&quot;) %&gt;%
   janitor::clean_names()</code></pre>
 <pre><code>## Rows: 469 Columns: 2392
 ## ── Column specification ────────────────────────────────────────────────────────
@@ -1865,7 +1872,7 @@ raw_data &lt;- read_csv(&quot;data/qst/PCATR56_DATA_2024-03-05_1048.csv&quot;) %
 ## 
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
-<pre class="r"><code>stai_items &lt;- read_csv(&quot;data/qst/stai_items.csv&quot;) %&gt;%
+<pre class="r"><code>stai_items &lt;- read_csv(&quot;questionnaires/input/stai_items.csv&quot;) %&gt;%
   janitor::clean_names()</code></pre>
 <pre><code>## Rows: 40 Columns: 4
 ## ── Column specification ────────────────────────────────────────────────────────
@@ -1907,7 +1914,7 @@ raw_data &lt;- read_csv(&quot;data/qst/PCATR56_DATA_2024-03-05_1048.csv&quot;) %
 ## 
 ## Bootstrap 95% CI based on 1000 samples
 ##  2.5% 97.5% 
-## 0.909 0.952</code></pre>
+## 0.908 0.952</code></pre>
 <pre class="r"><code>b &lt;- raw_data %&gt;%
   filter(redcap_event_name == &quot;pcat_arm_1&quot; | redcap_event_name == &quot;pcat_arm_4&quot;) %&gt;%
   select(record_id, stai1:stai40) %&gt;%
@@ -1941,13 +1948,13 @@ raw_data &lt;- read_csv(&quot;data/qst/PCATR56_DATA_2024-03-05_1048.csv&quot;) %
 ## 
 ## Bootstrap 95% CI based on 1000 samples
 ##  2.5% 97.5% 
-## 0.892 0.942</code></pre>
+## 0.890 0.941</code></pre>
 <pre class="r"><code># remove dfs I won&#39;t need again
 rm(&quot;a&quot;, &quot;b&quot;, &quot;stai_data&quot;, &quot;stai_items&quot;)</code></pre>
 </div>
 <div id="child-anxiety" class="section level3">
 <h3>Child Anxiety</h3>
-<pre class="r"><code>hbq_items &lt;- read_csv(&quot;data/qst/hbq_items.csv&quot;) %&gt;%
+<pre class="r"><code>hbq_items &lt;- read_csv(&quot;questionnaires/input/hbq_items.csv&quot;) %&gt;%
   janitor::clean_names()</code></pre>
 <pre><code>## Rows: 216 Columns: 6
 ## ── Column specification ────────────────────────────────────────────────────────
@@ -2002,13 +2009,13 @@ cronbach.alpha(c, CI=TRUE, standardized=FALSE)</code></pre>
 ## 
 ## Bootstrap 95% CI based on 1000 samples
 ##  2.5% 97.5% 
-## 0.720 0.846</code></pre>
+## 0.721 0.846</code></pre>
 <pre class="r"><code># remove dfs I won&#39;t need again
 rm(&quot;c&quot;, &quot;hbq_data_overall&quot;)</code></pre>
 </div>
 <div id="cbq-fear-and-effortful-control" class="section level3">
 <h3>CBQ Fear and Effortful Control</h3>
-<pre class="r"><code>cbq_items &lt;- read_csv(&quot;data/qst/cbq_items.csv&quot;) %&gt;%
+<pre class="r"><code>cbq_items &lt;- read_csv(&quot;questionnaires/input/cbq_items.csv&quot;) %&gt;%
   janitor::clean_names()</code></pre>
 <pre><code>## Rows: 94 Columns: 6
 ## ── Column specification ────────────────────────────────────────────────────────
@@ -2058,7 +2065,7 @@ cronbach.alpha(d, CI=TRUE, standardized=FALSE)</code></pre>
 ## 
 ## Bootstrap 95% CI based on 1000 samples
 ##  2.5% 97.5% 
-## 0.469 0.698</code></pre>
+## 0.464 0.698</code></pre>
 <pre class="r"><code>e &lt;- raw_data %&gt;%
   filter(redcap_event_name == &quot;pcat_arm_1&quot; | redcap_event_name == &quot;pcat_arm_4&quot;) %&gt;%
   select(record_id, cbq_1:cbq_94) %&gt;%
@@ -2100,7 +2107,7 @@ cronbach.alpha(e, CI=TRUE, standardized=FALSE)</code></pre>
 ## 
 ## Bootstrap 95% CI based on 1000 samples
 ##  2.5% 97.5% 
-## 0.793 0.883</code></pre>
+## 0.793 0.882</code></pre>
 <pre class="r"><code># remove dfs I won&#39;t need again
 rm(&quot;e&quot;, &quot;d&quot;)</code></pre>
 </div>

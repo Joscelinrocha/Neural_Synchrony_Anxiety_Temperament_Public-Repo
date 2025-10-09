@@ -1,0 +1,6 @@
+Step,N_dyads,Lost_dyads
+Raw dyads found in folders,120,
+After removing incomplete dyads,120,None
+After loading,120,None
+After preprocessing,109,"1103, 1109, 1115, 1118, 1119, 1130, 1176, 1221, 1237, 1238, 1239"
+In final sync_df,109,None

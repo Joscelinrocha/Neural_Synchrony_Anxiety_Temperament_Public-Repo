@@ -1,0 +1,42 @@
+variable,description,scale
+record_id,Family ID,
+stai1,1. I feel calm,stai_state
+stai2,2. I feel secure,stai_state
+stai3,3. I am tense ,stai_state
+stai4,4. I feel strained,stai_state
+stai5,5. I feel at ease,stai_state
+stai6,6. I feel upset,stai_state
+stai7,7. I am presently worrying over possible misfortunes,stai_state
+stai8,8. I feel satisfied ,stai_state
+stai9,9. I feel frightened,stai_state
+stai10,10. I feel comfortable,stai_state
+stai11,11. I feel self-confident,stai_state
+stai12,12. I feel nervous,stai_state
+stai13,13. I am jittery,stai_state
+stai14,14. I feel indecisive ,stai_state
+stai15,15. I am relaxed,stai_state
+stai16,16. I feel content,stai_state
+stai17,17. I am worried,stai_state
+stai18,18. I feel confused,stai_state
+stai19,19.  I feel steady,stai_state
+stai20,20. I feel pleasant ,stai_state
+stai21,21. I feel pleasant ,stai_trait
+stai22,22. I feel nervous and restless,stai_trait
+stai23,23. I feel satisfied with myself,stai_trait
+stai24,24. I wish I could be happy as others seem to be,stai_trait
+stai25,25. I feel like a failure,stai_trait
+stai26,26. I feel rested,stai_trait
+stai27,"27. I feel 'calm, cooled, and collected' ",stai_trait
+stai28,28. I feel that difficulties are piling up so that I cannot overcome them,stai_trait
+stai29,29. I worry too much over something that really doesn't matter,stai_trait
+stai30,30. I am happy,stai_trait
+stai31,31. I have disturbing thoughts,stai_trait
+stai32,32. I lack self-confidence,stai_trait
+stai33,33. I feel secure,stai_trait
+stai34,34. I make decisions easily,stai_trait
+stai35,35. I feel inadequate,stai_trait
+stai36,36. I am content,stai_trait
+stai37,37. Some unimportant thoughts run through my mind and it bothers me ,stai_trait
+stai38,38. I take disappointments so keenly that I can't put them out of my mind,stai_trait
+stai39,39. I am a steady person,stai_trait
+stai40,40. I get in a state of tension or turmoil as I think over my recent concerns and interests.,stai_trait
